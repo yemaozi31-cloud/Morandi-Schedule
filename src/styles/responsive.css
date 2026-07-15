@@ -1,0 +1,66 @@
+/* 响应式布局工具类 */
+
+.desktop-only {
+  display: none !important;
+}
+
+.tablet-only {
+  display: none !important;
+}
+
+.mobile-only {
+  display: none !important;
+}
+
+/* 移动端 < 768px */
+@media (max-width: 767px) {
+  .mobile-only {
+    display: flex !important;
+  }
+  .mobile-only-block {
+    display: block !important;
+  }
+  .desktop-only, .tablet-only {
+    display: none !important;
+  }
+}
+
+/* 平板 768-1023px */
+@media (min-width: 768px) and (max-width: 1023px) {
+  .tablet-only {
+    display: block !important;
+  }
+  .desktop-only, .mobile-only {
+    display: none !important;
+  }
+}
+
+/* 桌面端 ≥ 1024px */
+@media (min-width: 1024px) {
+  .desktop-only {
+    display: block !important;
+  }
+  .mobile-only, .tablet-only {
+    display: none !important;
+  }
+}
+
+/* 响应式文本排版 */
+@media (max-width: 767px) {
+  h1, .page-title {
+    font-size: var(--font-size-lg) !important;
+  }
+  h2 {
+    font-size: var(--font-size-md) !important;
+  }
+}
+
+/* 移动端触摸优化 */
+@media (max-width: 767px) {
+  button:not(.task-checkbox):not(.batch-checkbox), .clickable {
+    min-height: 44px;
+  }
+  input, select, textarea {
+    font-size: 16px !important; /* 防止 iOS 缩放 */
+  }
+}

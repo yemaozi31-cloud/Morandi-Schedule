@@ -1,0 +1,17 @@
+{
+  "version": "2.0",
+  "envId": "cloudebase-d5ghkl2v57487dd1a",
+  "framework": {
+    "plugins": {
+      "client": {
+        "use": "@cloudbase/framework-plugin-hosting",
+        "inputs": {
+          "dir": "dist",
+          "index": "index.html",
+          "error": "index.html",
+          "spa": true
+        }
+      }
+    }
+  }
+}

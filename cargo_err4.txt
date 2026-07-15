@@ -1,0 +1,33 @@
+    Checking tauri-runtime v2.11.2
+    Checking wry v0.55.1
+   Compiling morandi-schedule v0.4.0 (D:\Create\Schedule\src-tauri)
+error: failed to run custom build command for `morandi-schedule v0.4.0 (D:\Create\Schedule\src-tauri)`
+
+Caused by:
+  process didn't exit successfully: `D:\Create\Schedule\src-tauri\target\debug\build\morandi-schedule-c89062add48fcfeb\build-script-build` (exit code: 101)
+  --- stdout
+  cargo:rerun-if-env-changed=TAURI_CONFIG
+  cargo:rustc-check-cfg=cfg(desktop)
+  cargo:rustc-cfg=desktop
+  cargo:rustc-check-cfg=cfg(mobile)
+  cargo:rerun-if-changed=D:\Create\Schedule\src-tauri\tauri.conf.json
+  cargo:rustc-env=TAURI_ANDROID_PACKAGE_NAME_APP_NAME=schedule
+  cargo:rustc-env=TAURI_ANDROID_PACKAGE_NAME_PREFIX=com_morandi
+  cargo:rustc-check-cfg=cfg(dev)
+  cargo:rustc-cfg=dev
+  cargo:PERMISSION_FILES_PATH=D:\Create\Schedule\src-tauri\target\debug\build\morandi-schedule-2e046ede254e5f49\out\app-manifest\__app__-permission-files
+  cargo:rerun-if-changed=capabilities
+  cargo:rerun-if-env-changed=REMOVE_UNUSED_COMMANDS
+  cargo:rustc-env=TAURI_ENV_TARGET_TRIPLE=x86_64-pc-windows-msvc
+  package.metadata does not exist
+  Microsoft (R) Windows (R) Resource Compiler Version 10.0.10011.16384
+  Copyright (C) Microsoft Corporation.  All rights reserved.
+
+  D:\Create\Schedule\src-tauri\target\debug\build\morandi-schedule-2e046ede254e5f49\out\resource.rc(26) : error RC2176 : old DIB in D:\Create\Schedule\src-tauri\icons\icon.ico; pass it through SDKPAINT
+
+  --- stderr
+
+  thread 'main' (79424) panicked at C:\Users\PC\.cargo\registry\src\index.crates.io-1949cf8c6b5b557f\tauri-winres-0.3.6\src\lib.rs:543:14:
+  called `Result::unwrap()` on an `Err` value: Failed("RC.EXE failed to compile specified resource file")
+  note: run with `RUST_BACKTRACE=1` environment variable to display a backtrace
+warning: build failed, waiting for other jobs to finish...

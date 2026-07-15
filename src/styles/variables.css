@@ -1,0 +1,145 @@
+:root {
+  /* 主色调 - 豆沙绿 */
+  --color-primary: #A3B5A0;
+  --color-primary-hover: #B5C7B2;
+  --color-primary-pressed: #8FA38C;
+  
+  /* 背景 - 暖灰米白 */
+  --color-bg: #F5F0EB;
+  --color-bg-secondary: #EDE7E0;
+  
+  /* 卡片表面 - 柔和米白 */
+  --color-surface: #FAF7F2;
+  --color-surface-hover: #F0EBE4;
+  
+  /* 文字 - 深灰褐 */
+  --color-text: #4A4543;
+  --color-text-secondary: #8B8580;
+  --color-text-muted: #B5AFA8;
+  
+  /* 边框 - 浅灰褐 */
+  --color-border: #E0D9D0;
+  --color-border-light: #EDE7E0;
+  
+  /* 强调色 - 雾霾蓝 */
+  --color-accent: #8FA8B5;
+  --color-accent-hover: #A0B9C5;
+
+  /* 莫兰迪黄 */
+  --color-warm: #D4C09E;
+  --color-warm-hover: #E0CEB0;
+  
+  /* 语义色 - 柔和版本 */
+  --color-danger: #C4A0A0;
+  --color-danger-hover: #D4B0B0;
+  --color-warning: #D4C09E;
+  --color-success: #A0C4A0;
+  --color-info: #A0B5C4;
+
+  /* 优先级颜色（重要×紧急四象限） */
+  --priority-urgent-bg: #C4A0A0;
+  --priority-urgent-text: #FFFFFF;
+  --priority-high-bg: #C8A088;
+  --priority-high-text: #FFFFFF;
+  --priority-medium-bg: #C8C0A8;
+  --priority-medium-text: #3D3A38;
+  --priority-low-bg: #A8B8A0;
+  --priority-low-text: #FFFFFF;
+  --priority-none-bg: #D0C4B8;
+  --priority-none-text: #4A4543;
+  
+  /* 遮罩 */
+  --color-overlay: rgba(0, 0, 0, 0.35);
+
+  /* 阴影 */
+  --color-shadow: rgba(74, 69, 67, 0.08);
+  --color-shadow-heavy: rgba(74, 69, 67, 0.15);
+
+  /* 彩色背景上的文字颜色 */
+  --color-text-on-primary: #FFFFFF;
+  --color-text-on-colored: #FFFFFF;
+
+  /* 间距 */
+  --spacing-xs: 4px;
+  --spacing-sm: 8px;
+  --spacing-md: 12px;
+  --spacing-lg: 16px;
+  --spacing-xl: 24px;
+  --spacing-2xl: 32px;
+
+  /* 圆角 */
+  --radius-sm: 4px;
+  --radius-md: 8px;
+  --radius-lg: 12px;
+  --radius-xl: 16px;
+  --radius-full: 9999px;
+
+  /* 字体 */
+  --font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'PingFang SC', 'Microsoft YaHei', sans-serif;
+  --font-size-sm: 12px;
+  --font-size-md: 14px;
+  --font-size-lg: 16px;
+  --font-size-xl: 20px;
+  --font-size-2xl: 24px;
+
+  /* 过渡 */
+  --transition-fast: 0.15s ease;
+  --transition-normal: 0.25s ease;
+
+  /* 导航栏高度 */
+  --nav-height: 48px;
+
+  /* 断点（仅供CSS参考，实际响应式由JS控制） */
+  --bp-mobile: 768px;
+  --bp-tablet: 1024px;
+}
+
+/* 深色主题 - 莫兰迪暗夜 */
+[data-theme='dark'] {
+  --color-primary: #8A9B87;
+  --color-primary-hover: #9CAE99;
+  --color-primary-pressed: #7A8B77;
+  
+  --color-bg: #2A2726;
+  --color-bg-secondary: #32302F;
+  
+  --color-surface: #383534;
+  --color-surface-hover: #403D3C;
+  
+  --color-text: #E0DCD8;
+  --color-text-secondary: #A09B96;
+  --color-text-muted: #706B66;
+  
+  --color-border: #4A4744;
+  --color-border-light: #3D3A38;
+  
+  --color-accent: #7A939F;
+  --color-accent-hover: #8BA5B2;
+
+  /* 莫兰迪黄 */
+  --color-warm: #B8A88A;
+  --color-warm-hover: #C8B89A;
+  
+  --color-danger: #A88A8A;
+  --color-danger-hover: #B89A9A;
+  --color-warning: #B8A88A;
+  --color-success: #8AA88A;
+  --color-info: #8A9FA8;
+
+  --priority-urgent-bg: #A08080;
+  --priority-urgent-text: #FFFFFF;
+  --priority-high-bg: #A08878;
+  --priority-high-text: #FFFFFF;
+  --priority-medium-bg: #A0A088;
+  --priority-medium-text: #E0DCD8;
+  --priority-low-bg: #889888;
+  --priority-low-text: #FFFFFF;
+  --priority-none-bg: #504A45;
+  --priority-none-text: #A09B96;
+  
+  --color-shadow: rgba(0, 0, 0, 0.2);
+  --color-shadow-heavy: rgba(0, 0, 0, 0.35);
+
+  /* 遮罩 */
+  --color-overlay: rgba(0, 0, 0, 0.55);
+}
