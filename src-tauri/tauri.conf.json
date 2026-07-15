@@ -39,7 +39,7 @@
   "plugins": {
     "notification": null,
     "globalShortcut": {},
-    "autostart": {},
+    "autostart": null,
     "windowState": {},
     "shell": {},
     "clipboardManager": {}
