@@ -12,11 +12,13 @@
 
 | 平台 | 安装包 | 说明 |
 |------|--------|------|
-| **Windows** | [Morandi Schedule_0.4.0_x64-setup.exe](https://github.com/yemaozi31-cloud/Morandi-Schedule/releases/download/v0.4.0/Morandi.Schedule_0.4.0_x64-setup.exe) | NSIS 安装包 |
-| **macOS** | [Morandi Schedule_0.4.0_x64.dmg](https://github.com/yemaozi31-cloud/Morandi-Schedule/releases/download/v0.4.0/Morandi.Schedule_0.4.0_x64.dmg) | Intel / Apple Silicon |
+| **Windows** | [Morandi Schedule_0.4.0_x64-setup.exe](https://github.com/yemaozi31-cloud/Morandi-Schedule/releases/latest/download/Morandi.Schedule_0.4.0_x64-setup.exe) | NSIS 安装包 |
+| **macOS** | [Morandi Schedule_0.4.0_x64.dmg](https://github.com/yemaozi31-cloud/Morandi-Schedule/releases/latest/download/Morandi.Schedule_0.4.0_x64.dmg) | Intel / Apple Silicon |
 | **Android** | 开发中 | APK / AAB |
 
-> 也可在 [GitHub Releases](https://github.com/yemaozi31-cloud/Morandi-Schedule/releases) 页面查看所有版本。
+> 下载需要登录 GitHub 账号。也可在 [GitHub Releases](https://github.com/yemaozi31-cloud/Morandi-Schedule/releases) 页面查看所有版本。
+> 
+> 若链接 404，请等待 GitHub Actions 构建完成后刷新。
 
 ---
 

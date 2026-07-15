@@ -32,3 +32,24 @@ jobs:
         with:
           name: morandi-schedule-${{ matrix.os }}
           path: src-tauri/target/release/bundle/
+
+  release:
+    needs: build
+    if: github.ref == 'refs/heads/main' && github.event_name == 'push'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/download-artifact@v4
+        with:
+          pattern: morandi-schedule-*
+          merge-multiple: true
+
+      - name: Create Release
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: v0.4.0
+          name: v0.4.0
+          files: |
+            **/*.dmg
+            **/*.exe
+            **/*.msi
+          generate_release_notes: true
