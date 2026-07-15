@@ -91,4 +91,11 @@ const router = createRouter({
   routes
 })
 
+// 保存最后访问的页面（排除登录页和浮动窗）
+router.afterEach((to) => {
+  if (to.path !== '/login' && to.path !== '/floating') {
+    localStorage.setItem('last_page', to.path)
+  }
+})
+
 export default router

@@ -55,7 +55,14 @@ import { useHabitStore } from '@/stores/habitStore'
 import { usePomodoroStore } from '@/stores/pomodoroStore'
 import { decryptSyncData, encryptSyncData } from '@/utils/crypto'
 import * as db from '@/db'
+import { fetch as tauriFetch } from '@tauri-apps/plugin-http'
 import Icon from '@/components/common/Icon.vue'
+
+/** Tauri 环境检测 */
+const isTauri = window.location.protocol.startsWith('tauri') ||
+                window.location.hostname.includes('tauri')
+/** 跨环境 fetch — Tauri 下用插件绕过 CORS */
+const safeFetch = isTauri ? tauriFetch : window.fetch.bind(window)
 
 const router = useRouter()
 const settingsStore = useSettingsStore()
@@ -104,12 +111,13 @@ function importConfig() {
   }
 }
 
-/** 获取用户 WebDAV 文件 URL（与 syncFileUrl 相同逻辑） */
+/** 获取用户 WebDAV 文件 URL */
 function getUserFileUrl(nickname: string): string {
   const base = config.value.webdavUrl.endsWith('/') ? config.value.webdavUrl : config.value.webdavUrl + '/'
   const fileName = `${nickname}-sync.json`
-  const isTauri = typeof window !== 'undefined' && (window as any).__TAURI__
-  return isTauri ? encodeURI(base) + fileName : new URL(base).pathname + fileName
+  const fullUrl = base + fileName
+  // Tauri: 直连; 浏览器: 走 Vite 代理
+  return isTauri ? fullUrl : new URL(fullUrl).pathname
 }
 
 /** 生成 WebDAV Basic Auth header */
@@ -144,7 +152,7 @@ async function handleSubmit() {
 
     if (isLogin.value) {
       // ── 登录流程 ──────────────────────────────────────
-      const res = await fetch(url, { headers })
+      const res = await safeFetch(url, { headers })
       if (res.status === 404) {
         error.value = '账号不存在，请检查昵称或切换到注册'
         return
@@ -155,10 +163,22 @@ async function handleSubmit() {
       }
 
       let text = await res.text()
+      // 调试信息（直接显示在页面上）
+      const debugInfo = {
+        requestUrl: url,
+        httpStatus: res.status,
+        contentType: res.headers.get('content-type'),
+        fileLength: text.length,
+        startsWithAes: text.startsWith('$aes$'),
+        filePreview: text.slice(0, 100)
+      }
       // 用密码解密（decryptSyncData 返回空字符串表示密码错误）
       const decrypted = await decryptSyncData(text, pwd)
+      debugInfo.decryptEmpty = !decrypted
+      debugInfo.decryptPreview = (decrypted || '').slice(0, 100)
       if (!decrypted) {
         error.value = '密码错误'
+        console.log('[Login Debug]', JSON.stringify(debugInfo))
         return
       }
 
@@ -166,8 +186,14 @@ async function handleSubmit() {
       let data: any
       try {
         data = JSON.parse(decrypted)
-      } catch {
-        error.value = '数据格式损坏'
+      } catch (e) {
+        debugInfo.parseError = String(e)
+        debugInfo.decryptFull = (decrypted || '').slice(0, 500)
+        // 追加写入文件，方便查看
+        try { localStorage.setItem('login_debug', JSON.stringify(debugInfo)) } catch {}
+        // 页面显示详细错误（完整输出）
+        error.value = '调试:' + JSON.stringify(debugInfo, null, 2).slice(0, 1000)
+        console.log('[Login Debug]', JSON.stringify(debugInfo))
         return
       }
 
@@ -204,7 +230,7 @@ async function handleSubmit() {
     } else {
       // ── 注册流程 ──────────────────────────────────────
       // 用 PROPFIND 检查文件是否已存在
-      const check = await fetch(url, {
+      const check = await safeFetch(url, {
         method: 'PROPFIND',
         headers: { ...headers, Depth: '0' }
       })
@@ -234,7 +260,7 @@ async function handleSubmit() {
       }
 
       const encrypted = await encryptSyncData(JSON.stringify(initialData), pwd)
-      const putRes = await fetch(url, {
+      const putRes = await safeFetch(url, {
         method: 'PUT',
         headers: { ...headers, 'Content-Type': 'application/json' },
         body: encrypted

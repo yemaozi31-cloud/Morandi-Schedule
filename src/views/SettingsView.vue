@@ -15,6 +15,29 @@
         </section>
         <section class="settings-section">
           <div class="action-group">
+            <h3 class="section-title">账号</h3>
+            <div class="action-row">
+              <div class="action-info">
+                <span class="action-label">修改密码</span>
+                <span class="action-desc">重新加密云端同步数据</span>
+              </div>
+              <button class="action-btn" @click="showPasswordForm = !showPasswordForm">
+                {{ showPasswordForm ? '取消' : '修改' }}
+              </button>
+            </div>
+            <div v-if="showPasswordForm" class="password-form">
+              <input v-model="oldPwd" type="password" placeholder="当前密码" class="form-input" />
+              <input v-model="newPwd" type="password" placeholder="新密码" class="form-input" />
+              <input v-model="confirmPwd" type="password" placeholder="确认新密码" class="form-input" />
+              <p v-if="pwdError" class="form-error">{{ pwdError }}</p>
+              <button class="action-btn primary-btn" :disabled="changingPwd" @click="handleChangePassword">
+                {{ changingPwd ? '修改中...' : '确认修改' }}
+              </button>
+            </div>
+          </div>
+        </section>
+        <section class="settings-section">
+          <div class="action-group">
             <div class="action-row">
               <div class="action-info">
                 <span class="action-label">退出登录</span>
@@ -53,6 +76,7 @@
 </template>
 
 <script setup lang="ts">
+import { ref } from 'vue'
 import { useRouter } from 'vue-router'
 import { useSettingsStore } from '@/stores/settingsStore'
 import AppLayout from '@/components/layout/AppLayout.vue'
@@ -60,12 +84,93 @@ import ThemeEditor from '@/components/settings/ThemeEditor.vue'
 import SyncSettings from '@/components/settings/SyncSettings.vue'
 import DataManager from '@/components/settings/DataManager.vue'
 import MobileBackLink from '@/components/common/MobileBackLink.vue'
+import { fetch as tauriFetch } from '@tauri-apps/plugin-http'
+import { encryptSyncData, decryptSyncData } from '@/utils/crypto'
 
 const router = useRouter()
 const settingsStore = useSettingsStore()
+const isTauri = window.location.protocol.startsWith('tauri') ||
+                window.location.hostname.includes('tauri')
+const safeFetch = isTauri ? tauriFetch : window.fetch.bind(window)
+
+// 密码修改
+const showPasswordForm = ref(false)
+const oldPwd = ref('')
+const newPwd = ref('')
+const confirmPwd = ref('')
+const pwdError = ref('')
+const changingPwd = ref(false)
+
+function getAuthHeaders() {
+  const cfg = settingsStore.syncConfig
+  return { Authorization: 'Basic ' + btoa(`${cfg.webdavUsername}:${cfg.webdavPassword}`) }
+}
+
+function getFileUrl() {
+  const cfg = settingsStore.syncConfig
+  const base = cfg.webdavUrl.endsWith('/') ? cfg.webdavUrl : cfg.webdavUrl + '/'
+  return base + (cfg.nickname || 'default') + '-sync.json'
+}
+
+async function handleChangePassword() {
+  pwdError.value = ''
+  if (!oldPwd.value || !newPwd.value || !confirmPwd.value) {
+    pwdError.value = '请填写所有字段'
+    return
+  }
+  if (newPwd.value !== confirmPwd.value) {
+    pwdError.value = '两次输入的新密码不一致'
+    return
+  }
+  if (newPwd.value === oldPwd.value) {
+    pwdError.value = '新密码不能与旧密码相同'
+    return
+  }
+
+  changingPwd.value = true
+  try {
+    const url = getFileUrl()
+    const headers = getAuthHeaders()
+    const res = await safeFetch(url, { headers })
+    if (!res.ok) {
+      pwdError.value = '无法读取云端数据（HTTP ' + res.status + '）'
+      return
+    }
+    const text = await res.text()
+    const decrypted = await decryptSyncData(text, oldPwd.value)
+    if (!decrypted) {
+      pwdError.value = '旧密码错误'
+      return
+    }
+    // 用新密码重新加密并上传
+    const reEncrypted = await encryptSyncData(decrypted, newPwd.value)
+    const putRes = await safeFetch(url, {
+      method: 'PUT',
+      headers: { ...headers, 'Content-Type': 'application/json' },
+      body: reEncrypted
+    })
+    if (!putRes.ok) {
+      pwdError.value = '上传失败（HTTP ' + putRes.status + '）'
+      return
+    }
+    // 更新本地保存的密码
+    settingsStore.syncConfig.privateKey = newPwd.value
+    await settingsStore.saveSyncConfig()
+    window.__message?.success('密码修改成功')
+    showPasswordForm.value = false
+    oldPwd.value = ''
+    newPwd.value = ''
+    confirmPwd.value = ''
+  } catch (e: any) {
+    pwdError.value = e.message || '操作失败'
+  } finally {
+    changingPwd.value = false
+  }
+}
 
 function handleLogout() {
   localStorage.removeItem('morandi_logged_in')
+  localStorage.removeItem('last_page')
   router.push('/login')
 }
 </script>
@@ -159,6 +264,47 @@ function handleLogout() {
   font-size: var(--font-size-md);
   color: var(--color-text);
   font-weight: 500;
+}
+
+/* 修改密码表单 */
+.password-form {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  margin-top: 8px;
+  padding: 12px;
+  background: var(--color-bg);
+  border-radius: var(--radius-md);
+}
+.password-form .form-input {
+  width: 100%;
+  padding: 8px 10px;
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-sm);
+  background: var(--color-surface);
+  color: var(--color-text);
+  font-size: 13px;
+  outline: none;
+  box-sizing: border-box;
+}
+.password-form .form-input:focus {
+  border-color: var(--color-primary);
+}
+.password-form .form-error {
+  color: var(--color-danger);
+  font-size: 12px;
+  margin: 0;
+}
+.password-form button {
+  width: 100%;
+  padding: 8px;
+  border-radius: var(--radius-sm);
+  font-size: 13px;
+  border: none;
+  cursor: pointer;
+}
+.password-form button:disabled {
+  opacity: 0.5;
 }
 
 </style>

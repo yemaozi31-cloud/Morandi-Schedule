@@ -19,6 +19,13 @@
     "shell:allow-open",
     "clipboard-manager:default",
     "clipboard-manager:allow-read-text",
-    "clipboard-manager:allow-write-text"
+    "clipboard-manager:allow-write-text",
+    {
+      "identifier": "http:default",
+      "allow": [{ "url": "https://*" }]
+    },
+    "http:allow-fetch",
+    "http:allow-fetch-send",
+    "http:allow-fetch-read-body"
   ]
 }

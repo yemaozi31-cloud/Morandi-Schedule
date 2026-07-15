@@ -15,6 +15,10 @@ import { SYNC_FILE_NAME, SYNC_DATA_VERSION, SYNC_STORE_NAMES } from '@/utils/con
 import type { SyncConfig } from '@/types'
 import { encryptSyncData, decryptSyncData } from '@/utils/crypto'
 
+// ─── 写入锁（防止并发同步导致文件损坏）
+let pushLock = false
+const pendingPushes: (() => Promise<void>)[] = []
+
 // ─── 类型 ─────────────────────────────────────────────────────
 
 /** 云端同步数据包结构 */
@@ -59,16 +63,15 @@ function syncFileUrl(config: SyncConfig): string {
   const nick = config.nickname || 'default'
   const fileName = `${nick}-sync.json`
 
-  // Tauri 桌面端：直接请求 WebDAV 服务器（CSP 已放开 connect-src）
-  // 浏览器开发模式：走 Vite 代理（/dav/ → https://dav.jianguoyun.com/dav/）
-  const isTauri = typeof window !== 'undefined' && (window as any).__TAURI__
+  // Tauri 桌面端：直连 WebDAV; 浏览器模式：走 Vite 代理
+  const isTauri = window.location.protocol.startsWith('tauri') ||
+                  window.location.hostname.includes('tauri')
   if (isTauri) {
-    return encodeURI(base) + fileName
-  } else {
-    // 浏览器模式：取 URL 的路径部分，Vite 代理自动补协议和 host
-    const parsed = new URL(base)
-    return parsed.pathname + fileName
+    return base + fileName
   }
+  // 浏览器模式：取 URL 的路径部分，Vite 代理自动补协议和 host
+  const parsed = new URL(base)
+  return parsed.pathname + fileName
 }
 
 /** 获取或生成本设备唯一标识（存 localStorage） */
@@ -145,7 +148,21 @@ export async function testConnection(config: SyncConfig): Promise<SyncResult> {
  * 将本地全量数据上传（Push）到 WebDAV
  * 读取 IndexedDB 所有 store → 序列化为 JSON → PUT 到云端
  */
+async function acquirePushLock(): Promise<void> {
+  if (pushLock) {
+    return new Promise(resolve => { pendingPushes.push(resolve) })
+  }
+  pushLock = true
+}
+
+function releasePushLock(): void {
+  pushLock = false
+  const next = pendingPushes.shift()
+  if (next) { pushLock = true; next() }
+}
+
 export async function pushToWebDAV(config: SyncConfig): Promise<SyncResult> {
+  await acquirePushLock()
   try {
     // 1. 读取本地全量数据
     const [tasks, tags, habits, habitCheckIns, pomodoroSessions] = await Promise.all([
@@ -194,6 +211,8 @@ export async function pushToWebDAV(config: SyncConfig): Promise<SyncResult> {
     }
   } catch (e: any) {
     return { ok: false, message: `上传出错：${e.message || e}` }
+  } finally {
+    releasePushLock()
   }
 }
 
@@ -327,9 +346,10 @@ interface SharedData {
 /** 共享文件 URL（与 syncFileUrl 一样处理 Vite 代理） */
 function sharedFileUrl(config: SyncConfig): string {
   const base = config.webdavUrl.endsWith('/') ? config.webdavUrl : config.webdavUrl + '/'
-  const isTauri = typeof window !== 'undefined' && (window as any).__TAURI__
+  const isTauri = window.location.protocol.startsWith('tauri') ||
+                  window.location.hostname.includes('tauri')
   if (isTauri) {
-    return encodeURI(base) + 'shared.json'
+    return base + 'shared.json'
   } else {
     const parsed = new URL(base)
     return parsed.pathname + 'shared.json'
@@ -340,8 +360,9 @@ function sharedFileUrl(config: SyncConfig): string {
 export async function discoverUsersFromWebDAV(config: SyncConfig): Promise<string[]> {
   try {
     const base = config.webdavUrl.endsWith('/') ? config.webdavUrl : config.webdavUrl + '/'
-    const isTauri = typeof window !== 'undefined' && (window as any).__TAURI__
-    const url = isTauri ? encodeURI(base) : new URL(base).pathname
+    const isTauri = window.location.protocol.startsWith('tauri') ||
+                  window.location.hostname.includes('tauri')
+    const url = isTauri ? base : new URL(base).pathname
     const res = await fetch(url, {
       method: 'PROPFIND',
       headers: {

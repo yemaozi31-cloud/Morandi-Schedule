@@ -90,6 +90,20 @@ onMounted(async () => {
     initKeyboardService()
     registerShortcut('Ctrl+n', () => uiStore.openNewTaskForm())
     registerShortcut('Escape', () => uiStore.closeTaskForm())
+
+    // 恢复上次打开的页面
+    const lastPage = localStorage.getItem('last_page')
+    if (lastPage && lastPage !== '/' && lastPage !== '/login' && lastPage !== '/floating') {
+      router.push(lastPage)
+    }
+
+    // 自动同步（配置了 autoSync 时）
+    if (settingsStore.syncConfig.autoSync && settingsStore.syncConfig.webdavUrl) {
+      try {
+        const { sync } = await import('@/services/webdavSync')
+        sync(settingsStore.syncConfig).catch(() => {})
+      } catch {}
+    }
   } catch (e) {
     console.error('Failed to load initial data:', e)
     window.__message?.error('数据加载失败，请刷新重试')
