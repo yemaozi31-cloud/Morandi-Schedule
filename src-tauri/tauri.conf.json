@@ -37,7 +37,7 @@
     "targets": "all"
   },
   "plugins": {
-    "notification": {},
+    "notification": null,
     "globalShortcut": {},
     "autostart": {},
     "windowState": {},
