@@ -55,30 +55,36 @@
           class="week-col"
           :class="{ 'col-selected': day.date === props.selectedDate }"
         >
-          <template v-if="getRegularTasksForDate(day.date).length > 0">
-            <div
-              v-for="task in getRegularTasksForDate(day.date)"
-              :key="task.id"
-              class="task-card"
-              :class="'p-' + task.priority"
-              @click="$emit('selectTask', task.id)"
-            >
+          <!-- 课程块 + 任务块混合显示（最多3条） -->
+          <template v-for="item in getDayCards(day.date).items" :key="item.id">
+            <!-- 课程块：无打勾，显示教室+时间 -->
+            <div v-if="item.isCourse" class="course-card" @click="$emit('selectTask', item.id)">
+              <span class="course-title">{{ item.courseLocation ? '[' + item.courseLocation + '] ' : '' }}{{ item.title }}</span>
+              <span class="course-time">{{ item.courseStartTime }}–{{ item.courseEndTime }}</span>
+            </div>
+            <!-- 普通任务块 -->
+            <div v-else class="task-card" :class="'p-' + item.priority" @click="$emit('selectTask', item.id)">
               <div class="task-card-top">
-                <button class="task-toggle" @click.stop="$emit('toggleTask', task.id)">
-                  <Icon :name="task.status === 'completed' ? 'check-circle' : 'circle'" :size="12" />
+                <button class="task-toggle" @click.stop="$emit('toggleTask', item.id)">
+                  <Icon :name="item.status === 'completed' ? 'check-circle' : 'circle'" :size="12" />
                 </button>
-                <span class="task-title">{{ task.title }}</span>
-                <button class="task-delete" @click.stop="$emit('deleteTask', task.id)">
+                <span class="task-title">{{ item.title }}</span>
+                <button class="task-delete" @click.stop="$emit('deleteTask', item.id)">
                   <Icon name="x" :size="10" />
                 </button>
               </div>
               <div class="task-meta">
-                <span v-if="task.dueTime" class="task-time">{{ task.dueTime }}</span>
+                <span v-if="item.dueTime" class="task-time">{{ item.dueTime }}</span>
               </div>
             </div>
           </template>
-          <div v-else class="week-col-empty" @click="handleDayClick(day.date)">
+          <!-- 空状态 -->
+          <div v-if="getDayCards(day.date).isEmpty" class="week-col-empty" @click="handleDayClick(day.date)">
             <span>+</span>
+          </div>
+          <!-- 溢出气泡 -->
+          <div v-if="getDayCards(day.date).hiddenCount > 0" class="overflow-badge" @click="handleDayClick(day.date)">
+            +{{ getDayCards(day.date).hiddenCount }}
           </div>
         </div>
         </div>
@@ -115,10 +121,11 @@
               v-for="t in cell.allTasks"
               :key="t.id"
               class="wc-task"
-              :class="[t.status === 'completed' ? 'task-done' : '', 'p-' + (t.priority || 'none'), (t.priority || 'none') === 'none' ? cell.period.section : '']"
+              :class="[t.status === 'completed' ? 'task-done' : '', 'p-' + (t.priority || 'none'), (t.priority || 'none') === 'none' ? cell.period.section : '', t.isCourse ? 'course' : '']"
               @click.stop="$emit('selectTask', t.id)"
             >
-              <span class="wc-task-t">{{ t.title }}</span>
+              <span v-if="t.isCourse" class="wc-task-t">{{ t.courseLocation ? '[' + t.courseLocation + '] ' : '' }}{{ t.title }}</span>
+              <span v-else class="wc-task-t">{{ t.title }}</span>
             </div>
             <div v-if="cell.allTasks.length === 0" class="wc-empty"></div>
             <div v-if="cell.hiddenCount > 0" class="wc-bubble" @click.stop="handleCellClick(row.day.date, cell.period)">{{ cell.hiddenCount }}+</div>
@@ -279,6 +286,51 @@ function getRegularTasksForDate(dateStr: string): Task[] {
     })
 }
 
+// ── 桌面端：课程 + 任务统一显示，最多3条 ──
+const MAX_VISIBLE = 3
+
+interface DayCards {
+  date: string
+  items: Task[]
+  hiddenCount: number
+  isEmpty: boolean
+}
+
+const dayCardsMap = computed(() => {
+  const map: Record<string, DayCards> = {}
+  for (const day of weekDays.value) {
+    const date = parseISO(day.date)
+    const dow = date.getDay() // 0=周日
+
+    // 课程（按 courseDay 匹配）
+    const courses = props.tasks.filter(t => {
+      if (t.deletedAt || !t.isCourse) return false
+      if (t.isSpanning) return false
+      if (t.courseDay !== dow) return false
+      if (t.courseValidFrom && day.date < t.courseValidFrom) return false
+      if (t.courseValidTo && day.date > t.courseValidTo) return false
+      return true
+    })
+    courses.sort((a, b) => (a.courseStartTime || '').localeCompare(b.courseStartTime || ''))
+
+    // 普通任务
+    const regulars = getRegularTasksForDate(day.date)
+
+    const all = [...courses, ...regulars]
+    map[day.date] = {
+      date: day.date,
+      items: all.slice(0, MAX_VISIBLE),
+      hiddenCount: Math.max(0, all.length - MAX_VISIBLE),
+      isEmpty: all.length === 0,
+    }
+  }
+  return map
+})
+
+function getDayCards(dateStr: string): DayCards {
+  return dayCardsMap.value[dateStr] || { date: dateStr, items: [], hiddenCount: 0, isEmpty: true }
+}
+
 // 手机端卡片：跨天任务按日期范围显示
 function getTasksForDate(dateStr: string): Task[] {
   return props.tasks
@@ -338,14 +390,28 @@ const rowData = computed<RowData[]>(() => {
 
   return weekDays.value.map(day => {
     const dateStr = day.date
-    // ── 第1步：把所有任务分两类 ──
-    const timed: Task[] = []   // A类：有 dueTime
-    const untimed: Task[] = [] // B类：无 dueTime（按优先级排序）
     const priorityOrder: Record<string, number> = { urgent: 0, high: 1, medium: 2, low: 3, none: 4 }
+
+    // ── 第1步：把所有任务分三类（含课程） ──
+    const timed: Task[] = []   // A类：有 dueTime（含课程）
+    const untimed: Task[] = [] // B类：无 dueTime
 
     for (const t of props.tasks) {
       if (t.deletedAt) continue
-      // 日期匹配
+
+      // 课程：按 courseDay + courseStartTime 匹配
+      if (t.isCourse) {
+        const courseDate = parseISO(dateStr)
+        const dow = courseDate.getDay() // 0=周日
+        if (t.courseDay !== dow) continue
+        if (t.courseValidFrom && dateStr < t.courseValidFrom) continue
+        if (t.courseValidTo && dateStr > t.courseValidTo) continue
+        // 用 courseStartTime 作为时间段匹配依据
+        timed.push({ ...t, dueTime: t.courseStartTime || null })
+        continue
+      }
+
+      // 日期匹配（普通任务 / 跨天任务）
       if (t.isSpanning && t.startDate && t.dueDate) {
         const s = t.startDate.slice(0, 10)
         const e = t.dueDate.slice(0, 10)
@@ -590,6 +656,54 @@ const rowData = computed<RowData[]>(() => {
 .task-time {
   font-size: 10px;
   color: var(--color-text-muted);
+}
+
+/* ---- 课程卡片（桌面端） ---- */
+.course-card {
+  border-radius: var(--radius-md);
+  padding: var(--spacing-xs) var(--spacing-sm);
+  cursor: pointer;
+  transition: transform 0.12s, box-shadow 0.12s;
+  flex-shrink: 0;
+  background: color-mix(in srgb, #6B8FA3 20%, var(--color-bg));
+  border-left: 3px solid #6B8FA3;
+}
+.course-card:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 2px 6px rgba(0,0,0,0.08);
+}
+.course-title {
+  font-size: var(--font-size-xs);
+  color: var(--color-text);
+  font-weight: 500;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  display: block;
+}
+.course-time {
+  font-size: 10px;
+  color: var(--color-text-muted);
+  display: block;
+  margin-top: 1px;
+}
+
+/* ---- 溢出气泡（桌面端） ---- */
+.overflow-badge {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 3px 0;
+  cursor: pointer;
+  color: var(--color-primary);
+  font-size: var(--font-size-sm);
+  font-weight: 600;
+  border-radius: var(--radius-sm);
+  background: color-mix(in srgb, var(--color-primary) 8%, var(--color-bg));
+  flex-shrink: 0;
+}
+.overflow-badge:hover {
+  background: color-mix(in srgb, var(--color-primary) 15%, var(--color-bg));
 }
 
 .week-col-empty {
@@ -853,6 +967,7 @@ const rowData = computed<RowData[]>(() => {
   .wc-task.p-none.afternoon  { background: #DCD0C0; color: #4A4038; }
   .wc-task.p-none.evening    { background: #D0C8D8; color: #403850; }
   .wc-task.task-done { opacity: 0.3; text-decoration: line-through; }
+  .wc-task.course { background: #6B8FA3; color: #fff; font-weight: 700; }
 
   .wc-task-t {
     display: block;

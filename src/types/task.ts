@@ -18,6 +18,15 @@ export interface Task {
   updatedAt?: string
   completedAt?: string | null
   deletedAt?: string | null
+
+  // ── 课程字段（课表导入使用） ──
+  isCourse?: boolean
+  courseDay?: number       // 0=周日 .. 6=周六
+  courseStartTime?: string // HH:mm
+  courseEndTime?: string   // HH:mm
+  courseLocation?: string
+  courseValidFrom?: string // YYYY-MM-DD
+  courseValidTo?: string   // YYYY-MM-DD
 }
 
 export interface RecurringRule {

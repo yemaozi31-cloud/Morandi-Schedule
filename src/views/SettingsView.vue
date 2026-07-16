@@ -11,6 +11,19 @@
           <SyncSettings />
         </section>
         <section class="settings-section">
+          <div class="action-group">
+            <h3 class="section-title">课表导入</h3>
+            <div class="action-row">
+              <div class="action-info">
+                <span class="action-label">导入课表</span>
+                <span class="action-desc">从教务系统导出的 ICS 文件导入课程</span>
+              </div>
+              <label class="action-btn" for="course-import">选择文件</label>
+              <input id="course-import" type="file" accept=".ics" style="display:none" @change="handleCourseImport" />
+            </div>
+          </div>
+        </section>
+        <section class="settings-section">
           <DataManager />
         </section>
         <section class="settings-section">
@@ -202,6 +215,30 @@ async function handleChangePassword() {
   } finally {
     changingPwd.value = false
   }
+}
+
+async function handleCourseImport(e: Event) {
+  const input = e.target as HTMLInputElement
+  const file = input.files?.[0]
+  if (!file) return
+
+  try {
+    const text = await file.text()
+    const { parseICS, importCourses } = await import('@/services/courseImporter')
+    const courses = parseICS(text)
+    if (courses.length === 0) {
+      window.__message?.error('未识别到有效课程')
+      return
+    }
+    if (confirm(`识别到 ${courses.length} 门课程，确认导入？`)) {
+      const result = await importCourses(courses)
+      window.__message?.success(`导入完成：${result.success} 成功，${result.skipped} 跳过`)
+    }
+  } catch (e) {
+    console.error('导入课表失败:', e)
+    window.__message?.error('导入失败，请检查文件格式')
+  }
+  input.value = ''
 }
 
 function handleLogout() {
