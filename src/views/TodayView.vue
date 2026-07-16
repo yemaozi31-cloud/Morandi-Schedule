@@ -90,6 +90,16 @@
         @close="uiStore.closeTaskForm()"
         @save="handleSave"
       />
+      <!-- 本地确认弹窗 -->
+      <ConfirmDialog
+        v-if="deleteConfirm.show"
+        :show="deleteConfirm.show"
+        :title="'删除任务'"
+        :content="deleteConfirmMsg"
+        @confirm="onDeleteConfirmed(true)"
+        @cancel="onDeleteConfirmed(false)"
+        @update:show="(v) => { if (!v) onDeleteConfirmed(false) }"
+      />
     </div>
   </AppLayout>
 </template>
@@ -115,6 +125,7 @@ import TaskFormModal from '@/components/todo/TaskFormModal.vue'
 import TaskDetailModal from '@/components/todo/TaskDetailModal.vue'
 import HabitCard from '@/components/habits/HabitCard.vue'
 import EmptyState from '@/components/common/EmptyState.vue'
+import ConfirmDialog from '@/components/common/ConfirmDialog.vue'
 
 const taskStore = useTaskStore()
 const uiStore = useUiStore()
@@ -128,6 +139,8 @@ const editingTask = ref<Task | null>(null)
 const quickAddText = ref('')
 const quickAddInput = ref<HTMLInputElement>()
 const habitsExpand = ref(true)
+const deleteConfirm = reactive({ show: false, title: '', taskId: '' })
+const deleteConfirmMsg = computed(() => `确认删除任务"${deleteConfirm.title}"？此操作不可撤销。`)
 
 
 const todayHabits = computed(() =>
@@ -213,18 +226,20 @@ async function handleToggle(taskId: string) {
   }
 }
 
-async function handleDelete(taskId: string) {
+function handleDelete(taskId: string) {
   console.log('[TodayView] handleDelete 被调用:', taskId)
   const task = taskStore.getTaskById(taskId)
   if (!task) return
-  const { showConfirm } = await import('@/utils/globalConfirm')
-  const confirmed = await showConfirm({
-    title: '删除任务',
-    content: `确认删除任务"${task.title}"？此操作不可撤销。`
-  })
+  deleteConfirm.show = true
+  deleteConfirm.title = task.title
+  deleteConfirm.taskId = taskId
+}
+
+async function onDeleteConfirmed(confirmed: boolean) {
+  deleteConfirm.show = false
   if (!confirmed) return
   try {
-    await taskStore.deleteTask(taskId)
+    await taskStore.deleteTask(deleteConfirm.taskId)
     window.__message?.success('任务已删除')
   } catch {
     window.__message?.error('删除失败，请重试')
