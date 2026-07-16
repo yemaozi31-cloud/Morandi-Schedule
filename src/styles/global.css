@@ -11,6 +11,7 @@ html {
   font-size: var(--font-size-md);
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
+  background: var(--color-bg);
 }
 
 body {
