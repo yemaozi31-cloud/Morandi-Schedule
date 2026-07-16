@@ -38,11 +38,7 @@ const emit = defineEmits<{
   (e: 'cancel'): void
 }>()
 
-const visible = ref(false)
-
-watch(() => props.show, (v) => {
-  visible.value = v
-})
+const visible = computed(() => props.show)
 
 function handleConfirm() {
   visible.value = false

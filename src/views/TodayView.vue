@@ -154,8 +154,10 @@ function openEditTask(taskId: string) {
 }
 
 watch(() => uiStore.showTaskForm, (show) => {
-  if (show && uiStore.editingTaskId) {
-    editingTask.value = taskStore.getTaskById(uiStore.editingTaskId) || null
+  if (show) {
+    editingTask.value = uiStore.editingTaskId
+      ? taskStore.getTaskById(uiStore.editingTaskId) || null
+      : null
   }
 })
 
