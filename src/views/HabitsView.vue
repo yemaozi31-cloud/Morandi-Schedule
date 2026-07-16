@@ -264,6 +264,8 @@ function handleChecked(habitId: string) {
 .form-group { display: flex; flex-direction: column; gap: var(--spacing-xs); }
 .form-group label { font-size: var(--font-size-sm); color: var(--color-text-secondary); }
 .form-group input, .form-group select {
+  width: 100%;
+  box-sizing: border-box;
   padding: var(--spacing-sm) var(--spacing-md);
   border: 1px solid var(--color-border); border-radius: var(--radius-md);
   background: var(--color-bg); color: var(--color-text);
@@ -295,4 +297,10 @@ function handleChecked(habitId: string) {
 .footer-btn.confirm { background: var(--color-primary); border: none; color: var(--color-text-on-primary); }
 .modal-fade-enter-active, .modal-fade-leave-active { transition: opacity 0.2s ease; }
 .modal-fade-enter-from, .modal-fade-leave-to { opacity: 0; }
+
+/* 窄屏：表单行换行 */
+@media (max-width: 480px) {
+  .form-row { flex-wrap: wrap; gap: var(--spacing-sm); }
+  .form-row .form-group { flex: 1 1 100%; min-width: 0; }
+}
 </style>

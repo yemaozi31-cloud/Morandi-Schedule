@@ -181,6 +181,10 @@ function onDateChange(val: string) {
   font-weight: 500;
 }
 
+/* 桌面端默认：隐藏图标和短文本 */
+.view-btn-icon { display: none; }
+.today-short { display: none; }
+
 /* ── 窄屏适配 ────────────────────── */
 @media (max-width: 767px) {
   .calendar-header { flex-wrap: nowrap; gap: 4px; }
@@ -193,7 +197,4 @@ function onDateChange(val: string) {
   .view-btn-label { display: none; }
   .view-btn-icon { display: inline-flex; }
 }
-/* 桌面端隐藏图标 */
-.view-btn-icon { display: none; }
-.today-short { display: none; }
 </style>

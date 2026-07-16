@@ -116,3 +116,12 @@ input:focus, textarea:focus, select:focus {
 :focus:not(:focus-visible) {
   outline: none;
 }
+
+/* 强制保持正圆（border-radius: 50% 依赖宽高相等） */
+button:where([class*="radius-full"]),
+button:where([class*="circle"]),
+.loading-spinner,
+.sync-spinner,
+.color-option {
+  aspect-ratio: 1;
+}
