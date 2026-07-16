@@ -109,11 +109,12 @@ async function refreshSharedStatus() {
     const data = await fetchSharedCheckIns(cfg.value)
     const filtered = data.filter(c => c.habitName === props.habit.sharedHabitName)
     allSharedCheckIns.value = filtered
-    const today = new Date().toISOString().slice(0, 10)
-    sharedTodayChecked.value = filtered.some(c => c.nick === cfg.value.nickname && c.date === today)
+    const today = getTodayStr()
+    // 如果云端有记录就用云端的，否则保留当前状态（避免刷新覆盖刚打上的卡）
+    const cloudChecked = filtered.some(c => c.nick === cfg.value.nickname && c.date === today)
+    if (cloudChecked) sharedTodayChecked.value = true
   } catch (e) {
     console.warn('[HabitCard] 拉取共享打卡失败:', e)
-    // 失败时不清空已有数据，保留上次结果
   }
 }
 
@@ -206,20 +207,21 @@ async function handleCheckIn() {
     if (props.habit.isShared) {
       // 共享习惯：同步云端 + 本地
       if (sharedTodayChecked.value) {
-        await cancelCheckIn(cfg.value, props.habit.sharedHabitName!, cfg.value.nickname!)
+        const ok = await cancelCheckIn(cfg.value, props.habit.sharedHabitName!, cfg.value.nickname!)
+        if (!ok) { window.__message?.error('取消打卡失败'); return }
         sharedTodayChecked.value = false
-        // 同步删除本地打卡记录
         const localCheckIn = habitStore.getCheckInsForHabit(props.habit.id).find(c => c.date === getTodayStr())
         if (localCheckIn) await habitStore.deleteCheckIn(localCheckIn.id, getTodayStr())
         window.__message?.info('已取消打卡')
       } else {
-        await checkInSharedHabit(cfg.value, props.habit.sharedHabitName!, cfg.value.nickname!)
+        const ok = await checkInSharedHabit(cfg.value, props.habit.sharedHabitName!, cfg.value.nickname!)
+        if (!ok) { window.__message?.error('打卡失败，请检查网络'); return }
         sharedTodayChecked.value = true
-        // 同步添加本地打卡记录（让 pendingHabitCount 更新）
         await habitStore.checkIn(props.habit.id, 1)
         window.__message?.success('打卡成功')
       }
-      refreshSharedStatus()
+      // 不执行 refreshSharedStatus，避免刷新覆盖刚设置的状态
+      setTimeout(() => refreshSharedStatus(), 2000)
       emit('checked', props.habit.id)
       return
     }

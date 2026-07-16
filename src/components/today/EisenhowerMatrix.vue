@@ -109,6 +109,22 @@ async function onDrop(e: DragEvent, targetQuadrant: string) {
   if (currentQ === targetQuadrant) return
 
   let newPriority: Task['priority'] | undefined
+
+  // 连续任务只改优先级，不改日期
+  if (task.isSpanning) {
+    switch (targetQuadrant) {
+      case 'q1': newPriority = 'high'; break
+      case 'q2': newPriority = task.priority === 'low' || task.priority === 'none' ? 'medium' : task.priority; break
+      case 'q3': newPriority = 'low'; break
+      case 'q4': newPriority = 'none'; break
+    }
+    try {
+      await taskStore.updateTask(taskId, { priority: newPriority })
+      window.__message?.success('任务已移动')
+    } catch { window.__message?.error('移动失败') }
+    return
+  }
+
   let newDueDate: string | null | undefined
 
   switch (targetQuadrant) {

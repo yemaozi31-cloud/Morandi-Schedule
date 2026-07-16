@@ -168,6 +168,7 @@ function getTaskCount(tagId: string): number {
 .tags-header h1 { font-size: var(--font-size-xl); color: var(--color-text); }
 
 .add-tag-btn {
+  margin-top: 10px;
   padding: var(--spacing-sm) var(--spacing-lg);
   background: var(--color-primary);
   color: var(--color-text-on-primary);

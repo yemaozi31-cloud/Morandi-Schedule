@@ -134,7 +134,7 @@
 </template>
 
 <script setup lang="ts">
-import { ref, computed, reactive, onMounted } from 'vue'
+import { ref, computed, reactive, onMounted, onUnmounted } from 'vue'
 import { getTodayStr } from '@/utils/date'
 import { useSettingsStore } from '@/stores/settingsStore'
 import { generateUUID } from '@/utils/uuid'
@@ -428,8 +428,10 @@ async function handleSharedCheckIn(habitName: string) {
   }
 }
 
-onMounted(loadSharedData)
-
+onMounted(() => {
+  loadSharedData()
+  setInterval(loadSharedData, 15000)
+})
 </script>
 
 <style scoped>

@@ -186,6 +186,7 @@ function handleChecked(habitId: string) {
 .habits-header h1 { font-size: var(--font-size-xl); color: var(--color-text); }
 
 .add-habit-btn {
+  margin-top: 10px;
   padding: var(--spacing-sm) var(--spacing-lg);
   background: var(--color-primary);
   color: var(--color-text-on-primary);

@@ -130,6 +130,7 @@ async function handleSave(data: any) {
 .kanban-controls {
   display: flex;
   gap: var(--spacing-sm);
+  margin-top: 10px;
 }
 
 .group-btn {

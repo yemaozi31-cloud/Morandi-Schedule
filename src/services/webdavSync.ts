@@ -428,12 +428,12 @@ export async function fetchSharedData(config: SyncConfig): Promise<SharedData> {
       return data
     }
     const data: SharedData = await res.json()
-    // 合并 discovered 用户到 knownUsers，过滤掉无效值
+    console.log('[webdavSync] fetchSharedData 成功, checkIns:', data.checkIns?.length)
     const merged = new Set([...(data.knownUsers || []), ...discovered])
     data.knownUsers = Array.from(merged).filter(u => u && u !== 'default' && u !== 'shared')
     await saveSharedData(config, data)
     return data
-  } catch {
+  } catch (e) { console.error('[webdavSync] fetchSharedData 失败:', e);
     const discovered = await discoverUsersFromWebDAV(config)
     return { version: 1, habits: [], checkIns: [], knownUsers: discovered }
   }
@@ -451,8 +451,9 @@ async function saveSharedData(config: SyncConfig, data: SharedData): Promise<boo
       },
       body: JSON.stringify(data, null, 2)
     })
+    console.log('[webdavSync] saveSharedData PUT', url, 'status:', res.status, 'ok:', res.ok)
     return res.ok
-  } catch { return false }
+  } catch (e) { console.error('[webdavSync] saveSharedData 失败:', e); return false }
 }
 
 /** 拉取共享打卡数据（兼容旧接口） */
@@ -538,6 +539,12 @@ export async function leaveSharedHabit(
 }
 
 /** 为共享习惯打卡 */
+/** 获取本地日期 YYYY-MM-DD */
+function localDateStr(): string {
+  const d = new Date()
+  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`
+}
+
 export async function checkInSharedHabit(
   config: SyncConfig,
   habitName: string,
@@ -547,7 +554,7 @@ export async function checkInSharedHabit(
     id: crypto.randomUUID(),
     habitName,
     nick,
-    date: new Date().toISOString().slice(0, 10),
+    date: localDateStr(),
     time: new Date().toLocaleTimeString('zh-CN', { hour: '2-digit', minute: '2-digit' })
   })
   return ok
@@ -560,7 +567,7 @@ export async function cancelCheckIn(
   nick: string
 ): Promise<boolean> {
   const data = await fetchSharedData(config)
-  const today = new Date().toISOString().slice(0, 10)
+  const today = localDateStr()
   data.checkIns = data.checkIns.filter(
     c => !(c.habitName === habitName && c.nick === nick && c.date === today)
   )
