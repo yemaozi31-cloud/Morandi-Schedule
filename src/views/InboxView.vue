@@ -53,7 +53,7 @@ const quickText = ref('')
 const editingTask = ref<Task | null>(null)
 
 const inboxTasks = computed(() =>
-  taskStore.activeTasks.filter(t => !t.tagIds.length && t.status === 'pending')
+  taskStore.activeTasks.filter(t => !t.tagIds.length)
 )
 
 function showConfirm(title: string, message: string, onConfirm: () => void) {

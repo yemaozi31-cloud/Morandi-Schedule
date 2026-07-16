@@ -238,7 +238,7 @@ const spanningTasksInWeek = computed(() => {
   const result: SpanningTaskItem[] = []
 
   for (const task of props.tasks) {
-    if (task.deletedAt || task.status === 'completed') continue
+    if (task.deletedAt) continue
     if (!task.isSpanning || !task.startDate || !task.dueDate) continue
     // 检查是否与本周有交集
     if (task.startDate > weekEnd || task.dueDate < weekStart) continue
@@ -267,7 +267,7 @@ function formatDate(dateStr: string): string {
 function getRegularTasksForDate(dateStr: string): Task[] {
   return props.tasks
     .filter(t => {
-      if (t.deletedAt || t.status === 'completed') return false
+      if (t.deletedAt) return false
       if (t.isSpanning) return false
       return t.dueDate === dateStr
     })
@@ -283,7 +283,7 @@ function getRegularTasksForDate(dateStr: string): Task[] {
 function getTasksForDate(dateStr: string): Task[] {
   return props.tasks
     .filter(t => {
-      if (t.deletedAt || t.status === 'completed') return false
+      if (t.deletedAt) return false
       if (t.isSpanning && t.startDate && t.dueDate) {
         const s = t.startDate.slice(0, 10)
         const e = t.dueDate.slice(0, 10)
@@ -307,7 +307,7 @@ function handleDayClick(date: string) {
 // ── 手机端大节表格 ──────────────────────────
 function getTasksInPeriod(dateStr: string, p: PeriodCfg): Task[] {
   return props.tasks.filter(t => {
-    if (t.deletedAt || t.status === 'completed') return false
+    if (t.deletedAt) return false
     if (t.isSpanning && t.startDate && t.dueDate) {
       const s = t.startDate.slice(0, 10)
       const e = t.dueDate.slice(0, 10)
@@ -344,7 +344,7 @@ const rowData = computed<RowData[]>(() => {
     const priorityOrder: Record<string, number> = { urgent: 0, high: 1, medium: 2, low: 3, none: 4 }
 
     for (const t of props.tasks) {
-      if (t.deletedAt || t.status === 'completed') continue
+      if (t.deletedAt) continue
       // 日期匹配
       if (t.isSpanning && t.startDate && t.dueDate) {
         const s = t.startDate.slice(0, 10)

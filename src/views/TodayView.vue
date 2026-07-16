@@ -131,13 +131,20 @@ const habitsExpand = ref(true)
 
 
 function showConfirm(title: string, message: string, onConfirm: () => void) {
-  window.__dialog?.warning({
-    title,
-    content: message,
-    positiveText: '确认',
-    negativeText: '取消',
-    onPositiveClick: onConfirm
-  })
+  if (window.__dialog) {
+    window.__dialog.warning({
+      title,
+      content: message,
+      positiveText: '确认',
+      negativeText: '取消',
+      onPositiveClick: onConfirm
+    })
+  } else {
+    console.warn('[showConfirm] __dialog 不可用，降级到原生 confirm')
+    if (confirm(`${title}\n${message}`)) {
+      onConfirm()
+    }
+  }
 }
 
 const todayHabits = computed(() =>

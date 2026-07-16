@@ -371,20 +371,34 @@ async function handleToggle(taskId: string) {
 }
 
 async function handleDelete(taskId: string) {
-  window.__dialog?.warning({
-    title: '删除任务',
-    content: '确定要删除该任务吗？此操作不会立即永久删除。',
-    positiveText: '确认',
-    negativeText: '取消',
-    onPositiveClick: async () => {
+  if (window.__dialog) {
+    window.__dialog.warning({
+      title: '删除任务',
+      content: '确定要删除该任务吗？此操作不会立即永久删除。',
+      positiveText: '确认',
+      negativeText: '取消',
+      onPositiveClick: async () => {
+        try {
+          await taskStore.deleteTask(taskId)
+          window.__message?.success('任务已删除')
+        } catch (e) {
+          console.error('[CalendarView] deleteTask失败:', e)
+          window.__message?.error('删除失败')
+        }
+      }
+    })
+  } else {
+    console.warn('[CalendarView] __dialog 不可用，降级 confirm')
+    if (confirm('确定要删除该任务吗？')) {
       try {
         await taskStore.deleteTask(taskId)
         window.__message?.success('任务已删除')
-      } catch {
+      } catch (e) {
+        console.error('[CalendarView] deleteTask失败:', e)
         window.__message?.error('删除失败')
       }
     }
-  })
+  }
 }
 
 async function handleQuickAdd() {

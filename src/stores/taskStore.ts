@@ -240,11 +240,17 @@ export const useTaskStore = defineStore('tasks', () => {
   }
 
   async function deleteTask(id: string) {
-    if (isDeleting) throw new Error('请勿重复提交')
+    if (isDeleting) {
+      console.warn('[taskStore] deleteTask 被并发拦截:', id)
+      throw new Error('请勿重复提交')
+    }
     isDeleting = true
     try {
       const now = new Date().toISOString()
       await updateTask(id, { deletedAt: now })
+    } catch (e) {
+      console.error('[taskStore] deleteTask 失败:', e, 'id:', id)
+      throw e
     } finally {
       isDeleting = false
     }

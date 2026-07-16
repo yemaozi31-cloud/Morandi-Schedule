@@ -135,7 +135,7 @@ const weekdays = ['日', '一', '二', '三', '四', '五', '六']
 
 function getTasksForDate(dateStr: string): Task[] {
   return props.tasks.filter(t => {
-    if (t.deletedAt || t.status === 'completed') return false
+    if (t.deletedAt) return false
     if (!t.isSpanning || !t.startDate) {
       return t.dueDate && t.dueDate.slice(0, 10) === dateStr
     }

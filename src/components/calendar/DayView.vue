@@ -8,7 +8,7 @@
           v-for="task in allDayTasks"
           :key="task.id"
           class="day-task-card all-day"
-          :class="task.priority"
+          :class="[task.priority, { completed: task.status === 'completed' }]"
         >
           <button class="task-toggle" @click.stop="handleToggle(task.id)">
             <Icon :name="task.status === 'completed' ? 'check-circle' : 'circle'" :size="14" />
@@ -32,7 +32,7 @@
             v-for="task in getTasksForHour(hour)"
             :key="task.id"
             class="day-task-card"
-            :class="task.priority"
+            :class="[task.priority, { completed: task.status === 'completed' }]"
             :style="taskStyle(task)"
           >
             <button class="task-toggle" @click.stop="handleToggle(task.id)">
@@ -71,7 +71,7 @@ const currentHour = computed(() => new Date().getHours() + 1)
 
 const allDayTasks = computed(() =>
   props.tasks.filter(t =>
-    t.dueDate && !t.deletedAt && t.status !== 'completed' && (
+    t.dueDate && !t.deletedAt && (
       !t.dueTime ||
       (t.isSpanning && t.dueDate !== props.currentDate)
     )
@@ -80,7 +80,7 @@ const allDayTasks = computed(() =>
 
 function getTasksForHour(hour: number): Task[] {
   return props.tasks.filter(t => {
-    if (!t.dueDate || t.deletedAt || t.status === 'completed') return false
+    if (!t.dueDate || t.deletedAt) return false
     if (!t.dueTime) return false
     // 跨天任务只在最后一天显示在时间轴上
     if (t.isSpanning && t.dueDate !== props.currentDate) return false
@@ -254,4 +254,7 @@ function handleDelete(taskId: string) {
   .task-title { font-size: var(--font-size-md); }
   .task-time { font-size: 10px; }
 }
+/* 已完成任务：灰色+删除线 */
+.day-task-card.completed { opacity: 0.5; }
+.day-task-card.completed .task-title { text-decoration: line-through; color: var(--color-text-muted); }
 </style>

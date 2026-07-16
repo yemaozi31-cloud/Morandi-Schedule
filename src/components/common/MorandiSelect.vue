@@ -98,6 +98,8 @@ function onClickOutside(e: MouseEvent) {
   if (!open.value || !isMobile.value) return // desktop 用自带行为
   const t = e.target as HTMLElement
   if (triggerRef.value?.contains(t)) return
+  // 点击输入框/文本框时不要关闭选择器，防止输入框失焦
+  if (t.tagName === 'INPUT' || t.tagName === 'TEXTAREA' || t.closest('input, textarea, [contenteditable]')) return
   close()
 }
 
