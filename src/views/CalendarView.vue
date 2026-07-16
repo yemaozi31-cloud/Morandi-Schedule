@@ -117,12 +117,25 @@
         @save="handleSave"
       />
 
+      <!-- 删除确认弹窗 -->
+      <ConfirmDialog
+        v-if="confirm.show"
+        :show="confirm.show"
+        :title="'删除任务'"
+        :content="confirm.content"
+        positive-text="确认"
+        negative-text="取消"
+        @confirm="onDeleteConfirmed(true)"
+        @cancel="onDeleteConfirmed(false)"
+        @update:show="(v) => { if (!v) onDeleteConfirmed(false) }"
+      />
+
     </div>
   </AppLayout>
 </template>
 
 <script setup lang="ts">
-import { ref, reactive, computed, watch, onMounted } from 'vue'
+import { ref, computed, watch, onMounted } from 'vue'
 import type { Task } from '@/types'
 import { useTaskStore } from '@/stores/taskStore'
 import { useUiStore } from '@/stores/uiStore'
@@ -130,6 +143,8 @@ import { useResponsive } from '@/composables/useResponsive'
 import { format, parseISO, addMonths, addWeeks, addDays, getTodayStr, startOfWeek, getWeekNumber } from '@/utils/date'
 import { nlpParse } from '@/utils/nlpParser'
 
+import { useDeleteTask } from '@/composables/useDeleteTask'
+import ConfirmDialog from '@/components/common/ConfirmDialog.vue'
 import AppLayout from '@/components/layout/AppLayout.vue'
 import CalendarHeader from '@/components/calendar/CalendarHeader.vue'
 import MonthView from '@/components/calendar/MonthView.vue'
@@ -143,6 +158,7 @@ import Icon from '@/components/common/Icon.vue'
 const taskStore = useTaskStore()
 const uiStore = useUiStore()
 const { isMobile } = useResponsive()
+const { confirm, handleDelete: origHandleDelete, onDeleteConfirmed } = useDeleteTask()
 
 const currentDate = ref(getTodayStr())
 const currentView = ref(localStorage.getItem('cal_view') || 'month')
@@ -370,36 +386,9 @@ async function handleToggle(taskId: string) {
   }
 }
 
-async function handleDelete(taskId: string) {
+function handleDelete(taskId: string) {
   console.log('[CalendarView] handleDelete 被调用:', taskId)
-  if (window.__dialog) {
-    window.__dialog.warning({
-      title: '删除任务',
-      content: '确定要删除该任务吗？此操作不会立即永久删除。',
-      positiveText: '确认',
-      negativeText: '取消',
-      onPositiveClick: async () => {
-        try {
-          await taskStore.deleteTask(taskId)
-          window.__message?.success('任务已删除')
-        } catch (e) {
-          console.error('[CalendarView] deleteTask失败:', e)
-          window.__message?.error('删除失败')
-        }
-      }
-    })
-  } else {
-    console.warn('[CalendarView] __dialog 不可用，降级 confirm')
-    if (confirm('确定要删除该任务吗？')) {
-      try {
-        await taskStore.deleteTask(taskId)
-        window.__message?.success('任务已删除')
-      } catch (e) {
-        console.error('[CalendarView] deleteTask失败:', e)
-        window.__message?.error('删除失败')
-      }
-    }
-  }
+  origHandleDelete(taskId)
 }
 
 async function handleQuickAdd() {

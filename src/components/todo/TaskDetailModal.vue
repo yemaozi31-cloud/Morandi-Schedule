@@ -40,6 +40,20 @@
           <button class="detail-btn add-btn" @click="handleAddNew">+ 添加新任务</button>
         </div>
       </div>
+
+      <!-- 删除确认弹窗 -->
+      <ConfirmDialog
+        v-if="confirm.show"
+        :show="confirm.show"
+        :title="'删除任务'"
+        :content="confirm.content"
+        positive-text="确认"
+        negative-text="取消"
+        @confirm="onDeleteConfirmed(true); close()"
+        @cancel="onDeleteConfirmed(false)"
+        @update:show="(v) => { if (!v) onDeleteConfirmed(false) }"
+      />
+
     </div>
   </teleport>
 </template>
@@ -49,6 +63,8 @@ import { computed } from 'vue'
 import type { Task } from '@/types'
 import { useUiStore } from '@/stores/uiStore'
 import { useTaskStore } from '@/stores/taskStore'
+import { useDeleteTask } from '@/composables/useDeleteTask'
+import ConfirmDialog from '@/components/common/ConfirmDialog.vue'
 import Icon from '@/components/common/Icon.vue'
 
 const props = defineProps<{
@@ -61,6 +77,7 @@ const emit = defineEmits<{
 
 const uiStore = useUiStore()
 const taskStore = useTaskStore()
+const { confirm, handleDelete: origHandleDelete, onDeleteConfirmed } = useDeleteTask()
 
 const task = computed<Task | null>(() => {
   if (!props.taskId) return null
@@ -94,24 +111,9 @@ function handleEdit() {
 }
 
 function handleDelete() {
-  console.log('[TaskDetailModal] handleDelete 被调用, taskId:', task.value?.id)
   if (!task.value) return
-  const id = task.value.id  // 先存到局部变量，防止闭包内 task 变化导致 TypeError
-  window.__dialog?.warning({
-    title: '删除任务',
-    content: `确认删除任务"${task.value.title}"？`,
-    positiveText: '确认',
-    negativeText: '取消',
-    onPositiveClick: async () => {
-      try {
-        await taskStore.deleteTask(id)  // 使用局部变量，而非 task.value!.id
-        window.__message?.success('已删除')
-        close()
-      } catch {
-        window.__message?.error('删除失败')
-      }
-    }
-  })
+  console.log('[TaskDetailModal] handleDelete 被调用, taskId:', task.value.id)
+  origHandleDelete(task.value.id)
 }
 
 function handleAddNew() {

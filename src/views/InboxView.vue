@@ -32,6 +32,20 @@
       @close="uiStore.closeTaskForm()"
       @save="handleSave"
     />
+
+    <!-- 删除确认弹窗 -->
+    <ConfirmDialog
+      v-if="confirm.show"
+      :show="confirm.show"
+      :title="'删除任务'"
+      :content="confirm.content"
+      positive-text="确认"
+      negative-text="取消"
+      @confirm="onDeleteConfirmed(true)"
+      @cancel="onDeleteConfirmed(false)"
+      @update:show="(v) => { if (!v) onDeleteConfirmed(false) }"
+    />
+
     </div>
   </AppLayout>
 </template>
@@ -42,6 +56,8 @@ import { useTaskStore } from '@/stores/taskStore'
 import { useUiStore } from '@/stores/uiStore'
 import { nlpParse } from '@/utils/nlpParser'
 import type { Task } from '@/types'
+import { useDeleteTask } from '@/composables/useDeleteTask'
+import ConfirmDialog from '@/components/common/ConfirmDialog.vue'
 import Icon from '@/components/common/Icon.vue'
 import AppLayout from '@/components/layout/AppLayout.vue'
 import TaskList from '@/components/todo/TaskList.vue'
@@ -51,20 +67,11 @@ const taskStore = useTaskStore()
 const uiStore = useUiStore()
 const quickText = ref('')
 const editingTask = ref<Task | null>(null)
+const { confirm, handleDelete: origHandleDelete, onDeleteConfirmed } = useDeleteTask()
 
 const inboxTasks = computed(() =>
   taskStore.activeTasks.filter(t => !t.tagIds.length)
 )
-
-function showConfirm(title: string, message: string, onConfirm: () => void) {
-  window.__dialog?.warning({
-    title,
-    content: message,
-    positiveText: '确认',
-    negativeText: '取消',
-    onPositiveClick: onConfirm
-  })
-}
 
 async function handleQuickAdd() {
   if (!quickText.value.trim()) return
@@ -114,18 +121,9 @@ async function handleToggle(taskId: string) {
   }
 }
 
-async function handleDelete(taskId: string) {
+function handleDelete(taskId: string) {
   console.log('[InboxView] handleDelete 被调用:', taskId)
-  const task = taskStore.getTaskById(taskId)
-  if (!task) return
-  showConfirm('删除任务', `确认删除任务"${task.title}"？`, async () => {
-    try {
-      await taskStore.deleteTask(taskId)
-      window.__message?.success('已删除')
-    } catch {
-      window.__message?.error('删除失败')
-    }
-  })
+  origHandleDelete(taskId)
 }
 </script>
 

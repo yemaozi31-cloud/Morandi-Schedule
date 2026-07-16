@@ -126,3 +126,8 @@ button:where([class*="circle"]),
 .color-option {
   aspect-ratio: 1;
 }
+
+/* Naive UI 消息提示偏移，避开灵动岛 */
+.n-message-container {
+  padding-top: calc(env(safe-area-inset-top, 0px) + 44px);
+}

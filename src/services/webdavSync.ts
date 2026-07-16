@@ -241,6 +241,7 @@ export async function pushToWebDAV(config: SyncConfig): Promise<SyncResult> {
  * 逐条比对 updatedAt，取较新者
  */
 export async function pullFromWebDAV(config: SyncConfig): Promise<SyncResult> {
+  let text = ''
   try {
     const url = syncFileUrl(config)
     const res = await safeFetch(url, {
@@ -255,7 +256,12 @@ export async function pullFromWebDAV(config: SyncConfig): Promise<SyncResult> {
       return { ok: false, message: `下载失败（HTTP ${res.status}）` }
     }
 
-    let text = await res.text()
+    text = await res.text()
+
+    // 如果是加密数据但没有私钥 → 提示配置私钥
+    if (text.startsWith('$aes$') && !config.privateKey) {
+      return { ok: false, message: '云端数据已加密，请先在设置页填写私有密钥后重新同步' }
+    }
 
     // 如果有私有密钥且数据是加密格式，先解密
     if (config.privateKey && text.startsWith('$aes$')) {
@@ -304,6 +310,8 @@ export async function pullFromWebDAV(config: SyncConfig): Promise<SyncResult> {
       stats: { downloaded: added + updated + skipped, added, updated }
     }
   } catch (e: any) {
+    console.error('[webdavSync] 下载出错:', e)
+    if (text) console.error('[webdavSync] 原始数据预览:', text.slice(0, 300))
     return { ok: false, message: `下载出错：${e.message || e}` }
   }
 }
@@ -313,24 +321,24 @@ export async function pullFromWebDAV(config: SyncConfig): Promise<SyncResult> {
  * 确保无论从哪台设备发起都能获取到全部最新数据
  */
 export async function sync(config: SyncConfig): Promise<SyncResult> {
-  // 1. 先上传本地最新数据到云端
+  // 1. 先从云端拉取其他设备的变更合并到本地
+  const pull = await pullFromWebDAV(config)
+
+  // 2. 再上传合并后的完整数据到云端
   const push = await pushToWebDAV(config)
   if (!push.ok) return push
 
-  // 2. 再从云端拉取（其他设备的变更）
-  const pull = await pullFromWebDAV(config)
-
   if (!pull.ok) {
-    // 推送成功但拉取失败的场景（如云端本来就没数据）
+    // 拉取失败但推送成功的场景（如云端本来就没数据）
     if (pull.message.includes('暂无同步数据')) {
       return { ok: true, message: '首次同步完成，数据已上传至云端' }
     }
-    return { ok: true, message: `上传成功，但拉取失败：${pull.message}` }
+    return { ok: true, message: `同步完成（上传成功，拉取：${pull.message}）` }
   }
 
   return {
     ok: true,
-    message: `同步完成\n${push.message}\n${pull.message}`
+    message: `同步完成\n${pull.message}\n${push.message}`
   }
 }
 

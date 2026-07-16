@@ -95,7 +95,9 @@
         v-if="deleteConfirm.show"
         :show="deleteConfirm.show"
         :title="'删除任务'"
-        :content="deleteConfirmMsg"
+        :content="deleteConfirm.content"
+        positive-text="确认"
+        negative-text="取消"
         @confirm="onDeleteConfirmed(true)"
         @cancel="onDeleteConfirmed(false)"
         @update:show="(v) => { if (!v) onDeleteConfirmed(false) }"
@@ -105,7 +107,7 @@
 </template>
 
 <script setup lang="ts">
-import { onMounted, computed, ref, reactive, watch } from 'vue'
+import { onMounted, computed, ref, watch } from 'vue'
 import { useTaskStore } from '@/stores/taskStore'
 import { useUiStore } from '@/stores/uiStore'
 import { useTagStore } from '@/stores/tagStore'
@@ -126,6 +128,7 @@ import TaskDetailModal from '@/components/todo/TaskDetailModal.vue'
 import HabitCard from '@/components/habits/HabitCard.vue'
 import EmptyState from '@/components/common/EmptyState.vue'
 import ConfirmDialog from '@/components/common/ConfirmDialog.vue'
+import { useDeleteTask } from '@/composables/useDeleteTask'
 
 const taskStore = useTaskStore()
 const uiStore = useUiStore()
@@ -139,8 +142,7 @@ const editingTask = ref<Task | null>(null)
 const quickAddText = ref('')
 const quickAddInput = ref<HTMLInputElement>()
 const habitsExpand = ref(true)
-const deleteConfirm = reactive({ show: false, title: '', taskId: '' })
-const deleteConfirmMsg = computed(() => `确认删除任务"${deleteConfirm.title}"？此操作不可撤销。`)
+const { confirm: deleteConfirm, handleDelete, onDeleteConfirmed } = useDeleteTask()
 
 
 const todayHabits = computed(() =>
@@ -226,25 +228,7 @@ async function handleToggle(taskId: string) {
   }
 }
 
-function handleDelete(taskId: string) {
-  console.log('[TodayView] handleDelete 被调用:', taskId)
-  const task = taskStore.getTaskById(taskId)
-  if (!task) return
-  deleteConfirm.show = true
-  deleteConfirm.title = task.title
-  deleteConfirm.taskId = taskId
-}
-
-async function onDeleteConfirmed(confirmed: boolean) {
-  deleteConfirm.show = false
-  if (!confirmed) return
-  try {
-    await taskStore.deleteTask(deleteConfirm.taskId)
-    window.__message?.success('任务已删除')
-  } catch {
-    window.__message?.error('删除失败，请重试')
-  }
-}
+// handleDelete / onDeleteConfirmed 由 useDeleteTask composable 提供
 
 async function onHabitChecked(habitId: string) {
   // HabitCard 内部已处理打卡/取消，此处不需要额外操作

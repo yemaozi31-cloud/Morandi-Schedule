@@ -69,6 +69,20 @@
         @close="uiStore.closeTaskForm()"
         @save="handleSave"
       />
+
+      <!-- 删除确认弹窗 -->
+      <ConfirmDialog
+        v-if="confirm.show"
+        :show="confirm.show"
+        :title="'删除任务'"
+        :content="confirm.content"
+        positive-text="确认"
+        negative-text="取消"
+        @confirm="onDeleteConfirmed(true)"
+        @cancel="onDeleteConfirmed(false)"
+        @update:show="(v) => { if (!v) onDeleteConfirmed(false) }"
+      />
+
     </div>
   </AppLayout>
 </template>
@@ -82,6 +96,8 @@ import type { Task } from '@/types'
 import { nlpParse } from '@/utils/nlpParser'
 import { format, parseISO, getTodayStr } from '@/utils/date'
 
+import { useDeleteTask } from '@/composables/useDeleteTask'
+import ConfirmDialog from '@/components/common/ConfirmDialog.vue'
 import AppLayout from '@/components/layout/AppLayout.vue'
 import TodoToolbar from '@/components/todo/TodoToolbar.vue'
 import EisenhowerMatrix from '@/components/today/EisenhowerMatrix.vue'
@@ -92,22 +108,13 @@ import TaskList from '@/components/todo/TaskList.vue'
 const taskStore = useTaskStore()
 const uiStore = useUiStore()
 const tagStore = useTagStore()
+const { confirm, handleDelete: origHandleDelete, onDeleteConfirmed } = useDeleteTask()
 
 const editingTask = ref<Task | null>(null)
 const quickAddText = ref('')
 const quickAddInput = ref<HTMLInputElement>()
 const batchMode = ref(false)
 const batchSelected = ref<Set<string>>(new Set())
-function showConfirm(title: string, message: string, onConfirm: () => void) {
-  window.__dialog?.warning({
-    title,
-    content: message,
-    positiveText: '确认',
-    negativeText: '取消',
-    onPositiveClick: onConfirm
-  })
-}
-
 // 列表模式：按日期分组
 const groupedTasks = computed(() => {
   const today = getTodayStr()
@@ -248,16 +255,7 @@ async function handleToggle(taskId: string) {
 
 function handleDelete(taskId: string) {
   console.log('[TodoView] handleDelete 被调用:', taskId)
-  const task = taskStore.getTaskById(taskId)
-  if (!task) return
-  showConfirm('删除任务', `确认删除任务"${task.title}"？此操作不可撤销。`, async () => {
-    try {
-      await taskStore.deleteTask(taskId)
-      window.__message?.success('任务已删除')
-    } catch {
-      window.__message?.error('删除失败，请重试')
-    }
-  })
+  origHandleDelete(taskId)
 }
 
 async function handleSave(data: any) {
