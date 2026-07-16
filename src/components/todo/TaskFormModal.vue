@@ -4,7 +4,11 @@
       <div v-if="visible" class="modal-overlay" @click.self="$emit('close')">
         <div class="modal-card">
           <div class="modal-header">
-            <h3>{{ editingTask ? '编辑任务' : '新建任务' }}</h3>
+            <div v-if="showCourseSwitch" class="modal-tabs">
+              <span class="modal-tab" @click="switchToCourse">课程</span>
+              <span class="modal-tab active">任务</span>
+            </div>
+            <h3 v-else>{{ editingTask ? '编辑任务' : '新建任务' }}</h3>
             <button class="modal-close" @click="$emit('close')" aria-label="关闭">
               <Icon name="x" :size="18" />
             </button>
@@ -156,12 +160,16 @@ import MorandiTimePicker from '@/components/common/MorandiTimePicker.vue'
 const props = defineProps<{
   visible: boolean
   editingTask?: Task | null
+  showCourseSwitch?: boolean
 }>()
 
 const emit = defineEmits<{
   (e: 'close'): void
   (e: 'save', data: any): void
+  (e: 'switchCourse'): void
 }>()
+
+function switchToCourse() { emit('switchCourse') }
 
 const tagStore = useTagStore()
 const uiStore = useUiStore()
@@ -345,6 +353,10 @@ watch(() => props.visible, (val) => {
 }
 
 .modal-header h3 { font-size: var(--font-size-lg); color: var(--color-text); }
+.modal-tabs { display: flex; gap: 0; background: var(--color-bg); border-radius: var(--radius-md); padding: 2px; }
+.modal-tab { padding: 4px 16px; border-radius: var(--radius-sm); font-size: var(--font-size-sm); color: var(--color-text-muted); cursor: pointer; transition: all 0.15s; }
+.modal-tab.active { background: var(--color-surface); color: var(--color-text); font-weight: 500; box-shadow: 0 1px 2px rgba(0,0,0,0.06); }
+.modal-tab:hover:not(.active) { color: var(--color-text); }
 
 .modal-close {
   color: var(--color-text-muted);

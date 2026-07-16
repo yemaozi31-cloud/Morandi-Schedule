@@ -30,10 +30,15 @@ export const useTaskStore = defineStore('tasks', () => {
     Array.from(tasks.value.values()).filter(t => !t.deletedAt)
   )
 
+  // 常规任务（排除课程）
+  const regularTasks = computed(() =>
+    activeTasks.value.filter(t => !t.isCourse)
+  )
+
   // 今日任务（不包括过期任务，过期任务由 DayTimeline 的过期区块单独显示）
   const todayTasks = computed(() => {
     const today = getTodayStr()
-    return activeTasks.value.filter(t => {
+    return regularTasks.value.filter(t => {
       if (t.status === 'cancelled') return false
       if (t.isSpanning && t.startDate) {
         return today >= t.startDate && today <= t.dueDate
@@ -44,12 +49,12 @@ export const useTaskStore = defineStore('tasks', () => {
 
   // 待完成任务数
   const pendingTasks = computed(() =>
-    activeTasks.value.filter(t => t.status === 'pending').length
+    regularTasks.value.filter(t => t.status === 'pending').length
   )
 
-  // 筛选后的任务
+  // 筛选后的任务（仅常规任务）
   const filteredTasks = computed(() => {
-    let result = activeTasks.value
+    let result = regularTasks.value
 
     if (filter.value.status) {
       result = result.filter(t => t.status === filter.value.status)
@@ -185,7 +190,16 @@ export const useTaskStore = defineStore('tasks', () => {
       createdAt: now,
       updatedAt: now,
       completedAt: null,
-      deletedAt: null
+      deletedAt: null,
+      // ── 课程字段 ──
+      isCourse: data.isCourse || null,
+      courseDay: data.courseDay || null,
+      courseStartTime: data.courseStartTime || null,
+      courseEndTime: data.courseEndTime || null,
+      courseLocation: data.courseLocation || null,
+      courseValidFrom: data.courseValidFrom || null,
+      courseValidTo: data.courseValidTo || null,
+      courseTeacher: data.courseTeacher || null
     }
     try {
       await db.set('tasks', task)
@@ -207,7 +221,7 @@ export const useTaskStore = defineStore('tasks', () => {
     const existing = tasks.value.get(id)
     if (!existing) { isUpdating = false; return }
     // 白名单：只允许更新这些字段，保护敏感字段不被意外覆写
-    const ALLOWED = ['title', 'description', 'priority', 'status', 'dueDate', 'dueTime', 'startDate', 'startTime', 'endDate', 'endTime', 'isSpanning', 'tagIds', 'recurring', 'reminder', 'deletedAt', 'completedAt']
+    const ALLOWED = ['title', 'description', 'priority', 'status', 'dueDate', 'dueTime', 'startDate', 'startTime', 'endDate', 'endTime', 'isSpanning', 'tagIds', 'recurring', 'reminder', 'deletedAt', 'completedAt', 'isCourse', 'courseDay', 'courseStartTime', 'courseEndTime', 'courseLocation', 'courseValidFrom', 'courseValidTo', 'courseTeacher']
     const sanitized: Partial<Task> = {}
     for (const key of ALLOWED) {
       if (key in data) {
@@ -338,7 +352,7 @@ export const useTaskStore = defineStore('tasks', () => {
   }
 
   function getTasksInRange(start: string, end: string): Task[] {
-    return activeTasks.value.filter(t => {
+    return regularTasks.value.filter(t => {
       if (!t.dueDate) return false
       // 持续事件：只要任务的范围与查询范围有交集就返回
       if (t.isSpanning && t.startDate) {
@@ -390,7 +404,7 @@ export const useTaskStore = defineStore('tasks', () => {
 
   return {
     tasks, filter, sortBy, viewMode, isLoading,
-    activeTasks, todayTasks, pendingTasks, filteredTasks, eisenhowerTasks,
+    activeTasks, regularTasks, todayTasks, pendingTasks, filteredTasks, eisenhowerTasks,
     loadTasks, createTask, updateTask, deleteTask, toggleComplete,
     getTaskById, getTasksInRange, setViewMode
   }

@@ -197,19 +197,18 @@ async function batchComplete() {
   exitBatchMode()
 }
 
-function batchDelete() {
-  showConfirm('批量删除', `确认删除 ${batchSelected.value.size} 项任务？此操作不可撤销。`, async () => {
-    let success = 0, fail = 0
-    for (const id of batchSelected.value) {
-      try { await taskStore.deleteTask(id); success++ } catch { fail++ }
-    }
-    if (fail > 0) {
-      window.__message?.warning(`已删除 ${success} 项，${fail} 项失败`)
-    } else {
-      window.__message?.success(`已删除 ${success} 项`)
-    }
-    exitBatchMode()
-  })
+async function batchDelete() {
+  if (!window.confirm(`确认删除 ${batchSelected.value.size} 项任务？此操作不可撤销。`)) return
+  let success = 0, fail = 0
+  for (const id of batchSelected.value) {
+    try { await taskStore.deleteTask(id); success++ } catch { fail++ }
+  }
+  if (fail > 0) {
+    window.__message?.warning(`已删除 ${success} 项，${fail} 项失败`)
+  } else {
+    window.__message?.success(`已删除 ${success} 项`)
+  }
+  exitBatchMode()
 }
 
 function exitBatchMode() {

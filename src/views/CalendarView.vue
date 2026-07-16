@@ -33,7 +33,7 @@
           v-if="currentView === 'month'"
           :current-date="currentDate"
           :task-map="taskMap"
-          :tasks="taskStore.activeTasks"
+          :tasks="taskStore.regularTasks"
           :selected-date="selectedDay"
           @select-date="selectDate"
           @select-task="openTask"
@@ -49,6 +49,7 @@
           @create-task="handleCreateTask"
           @toggle-task="handleToggle"
           @delete-task="handleDelete"
+          @add-course="handleAddCourse"
         />
         <DayTimeline
           v-else
@@ -113,10 +114,28 @@
       <TaskFormModal
         :visible="uiStore.showTaskForm"
         :editing-task="editingTask"
+        show-course-switch
         @close="uiStore.closeTaskForm()"
         @save="handleSave"
+        @switch-course="handleSwitchToCourse"
       />
 
+      <!-- 课程详情弹窗 -->
+      <CourseDetailModal
+        :course="courseDetail"
+        @close="closeCourseDetail"
+        @edit="handleCourseEdit"
+        @delete="handleCourseDelete"
+        @add-task="handleCreateTask"
+        @add-course="handleAddCourse"
+      />
+      <CourseFormModal
+        :visible="showCourseForm"
+        :course="editingCourse"
+        @close="showCourseForm = false; editingCourse = null"
+        @save="handleCourseSave"
+        @switch-task="handleSwitchToTask"
+      />
       <!-- 删除确认弹窗 -->
       <ConfirmDialog
         v-if="confirm.show"
@@ -145,6 +164,8 @@ import { nlpParse } from '@/utils/nlpParser'
 
 import { useDeleteTask } from '@/composables/useDeleteTask'
 import ConfirmDialog from '@/components/common/ConfirmDialog.vue'
+import CourseDetailModal from '@/components/course/CourseDetailModal.vue'
+import CourseFormModal from '@/components/course/CourseFormModal.vue'
 import AppLayout from '@/components/layout/AppLayout.vue'
 import CalendarHeader from '@/components/calendar/CalendarHeader.vue'
 import MonthView from '@/components/calendar/MonthView.vue'
@@ -159,6 +180,10 @@ const taskStore = useTaskStore()
 const uiStore = useUiStore()
 const { isMobile } = useResponsive()
 const { confirm, handleDelete: origHandleDelete, onDeleteConfirmed } = useDeleteTask()
+const courseDetail = ref<Task | null>(null)
+const showCourseForm = ref(false)
+const editingCourse = ref<any>(null)
+const addingCourse = ref(false)
 
 const currentDate = ref(getTodayStr())
 const currentView = ref(localStorage.getItem('cal_view') || 'month')
@@ -227,7 +252,7 @@ const headerTitle = computed(() => {
   if (currentView.value === 'week') {
     const start = startOfWeek(d, { weekStartsOn: 1 })
     const end = addDays(start, 6)
-    return `${start.getDate()}-${end.getDate()}`
+    return `${start.getMonth() + 1}.${start.getDate()}-${end.getDate()}`
   }
   return isMobile.value ? format(d, 'M.d') : format(d, 'yyyy年M月d日')
 })
@@ -252,9 +277,9 @@ const taskMap = computed(() => {
   return map
 })
 
-// 日视图任务（包含持续事件跨天）
+// 日视图任务（包含持续事件跨天，仅常规任务）
 const dayTasks = computed(() =>
-  taskStore.activeTasks.filter(t => {
+  taskStore.regularTasks.filter(t => {
     const targetDate = selectedDay.value || currentDate.value
     if (!targetDate || !t.dueDate) return false
     if (t.isSpanning && t.startDate) {
@@ -318,6 +343,7 @@ function onDayNav(date: string) {
 
 function selectDate(date: string) {
   selectedDay.value = date
+  currentDate.value = date
   if (isMobile.value) {
     currentView.value = 'day'
   }
@@ -328,11 +354,80 @@ function closeDayPanel() {
 }
 
 function openTask(taskId: string) {
-  uiStore.openDetail(taskId)
+  const task = taskStore.getTaskById(taskId)
+  if (task?.isCourse) {
+    courseDetail.value = task
+  } else {
+    uiStore.openDetail(taskId)
+  }
 }
 
 function openEdit(taskId: string) {
   openTask(taskId)
+}
+
+function closeCourseDetail() { courseDetail.value = null }
+
+function handleSwitchToCourse() {
+  uiStore.closeTaskForm()
+  editingTask.value = null
+  editingCourse.value = null
+  showCourseForm.value = true
+}
+
+function handleSwitchToTask() {
+  showCourseForm.value = false
+  editingCourse.value = null
+  editingTask.value = null
+  uiStore.openNewTaskForm({ dueDate: currentDate.value })
+}
+
+function handleAddCourse() {
+  editingCourse.value = null
+  showCourseForm.value = true
+}
+
+async function handleCourseSave(data: any) {
+  try {
+    if (editingCourse.value?.id) {
+      await taskStore.updateTask(editingCourse.value.id, { ...data, isCourse: true })
+      window.__message?.success('课程已更新')
+      showCourseForm.value = false
+      editingCourse.value = null
+      return
+    }
+    // 新建：可能有多条（多天）
+    let count = 0
+    const courses = data.courses || [{ ...data }]
+    for (const c of courses) {
+      await taskStore.createTask({
+        ...c,
+        isCourse: true,
+        priority: 'none',
+        recurring: { type: 'weekly' },
+        tagIds: []
+      })
+      count++
+    }
+    window.__message?.success(`已创建 ${count} 门课程`)
+    showCourseForm.value = false
+    editingCourse.value = null
+  } catch {
+    window.__message?.error('保存失败')
+  }
+}
+
+function handleCourseEdit(courseId: string) {
+  const task = taskStore.getTaskById(courseId)
+  if (task) {
+    editingCourse.value = task
+    showCourseForm.value = true
+  }
+}
+
+function handleCourseDelete(courseId: string) {
+  courseDetail.value = null
+  origHandleDelete(courseId)
 }
 
 function openNewTask() {
@@ -418,9 +513,14 @@ async function handleSave(data: any) {
       await taskStore.updateTask(editingTask.value.id, data)
       window.__message?.success('任务已更新')
     } else {
-      await taskStore.createTask({ ...data, dueDate: data.dueDate || selectedDay.value || null })
-      window.__message?.success('任务已创建')
+      await taskStore.createTask({
+        ...data,
+        isCourse: addingCourse.value || null,
+        dueDate: data.dueDate || selectedDay.value || null
+      })
+      window.__message?.success(addingCourse.value ? '课程已创建' : '任务已创建')
     }
+    addingCourse.value = false
     uiStore.closeTaskForm()
   } catch {
     window.__message?.error('保存失败')

@@ -21,6 +21,13 @@
               <label class="action-btn" for="course-import">选择文件</label>
               <input id="course-import" type="file" accept=".ics" style="display:none" @change="handleCourseImport" />
             </div>
+            <div class="action-row">
+              <div class="action-info">
+                <span class="action-label">删除课表</span>
+                <span class="action-desc">一键清除所有已导入的课程</span>
+              </div>
+              <button class="action-btn danger-btn" @click="handleDeleteCourses">删除</button>
+            </div>
           </div>
         </section>
         <section class="settings-section">
@@ -47,7 +54,7 @@
                 {{ changingPwd ? '修改中...' : '确认修改' }}
               </button>
             </div>
-            <div class="action-row">
+            <div class="action-row" v-if="isTauri">
               <div class="action-info">
                 <span class="action-label">开机自启动</span>
                 <span class="action-desc">系统启动时自动运行 Morandi Schedule</span>
@@ -80,7 +87,7 @@
               </div>
               <div class="about-row">
                 <span class="about-label">版本</span>
-                <span class="about-value">v0.4.8</span>
+                <span class="about-value">v0.5.1</span>
               </div>
               <div class="about-row">
                 <span class="about-label">技术栈</span>
@@ -102,6 +109,7 @@
 import { ref, onMounted } from 'vue'
 import { useRouter } from 'vue-router'
 import { useSettingsStore } from '@/stores/settingsStore'
+import { useTaskStore } from '@/stores/taskStore'
 import AppLayout from '@/components/layout/AppLayout.vue'
 import ThemeEditor from '@/components/settings/ThemeEditor.vue'
 import SyncSettings from '@/components/settings/SyncSettings.vue'
@@ -239,6 +247,32 @@ async function handleCourseImport(e: Event) {
     window.__message?.error('导入失败，请检查文件格式')
   }
   input.value = ''
+}
+
+async function handleDeleteCourses() {
+  const taskStore = useTaskStore()
+  // 课程名称列表（从 ICS 导入的典型课程名）
+  const courseNames = ['高等数学', '大学英语', '线性代数', '程序设计基础', '大学物理', '思想政治', '体育', '毛泽东思想', '马克思主义', '微积分', '概率论', '离散数学', '数据结构', '操作系统', '计算机网络', '编译原理']
+  // 找 isCourse=true 的 + 标题匹配课程名的普通任务
+  const courses = taskStore.activeTasks.filter(t =>
+    t.isCourse || courseNames.includes(t.title)
+  )
+  if (courses.length === 0) {
+    window.__message?.info('当前没有导入的课程')
+    return
+  }
+  if (!confirm(`确认删除全部 ${courses.length} 门课程？此操作不可撤销。`)) return
+  try {
+    let count = 0
+    for (const c of courses) {
+      await taskStore.deleteTask(c.id)
+      count++
+    }
+    window.__message?.success(`已删除 ${count} 门课程`)
+  } catch (e) {
+    console.error('删除课表失败:', e)
+    window.__message?.error('删除失败')
+  }
 }
 
 function handleLogout() {

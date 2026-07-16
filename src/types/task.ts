@@ -27,6 +27,7 @@ export interface Task {
   courseLocation?: string
   courseValidFrom?: string // YYYY-MM-DD
   courseValidTo?: string   // YYYY-MM-DD
+  courseTeacher?: string    // 教师名称
 }
 
 export interface RecurringRule {

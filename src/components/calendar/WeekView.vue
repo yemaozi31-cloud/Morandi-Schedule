@@ -13,6 +13,7 @@
           <Icon name="chevron-right" :size="18" />
         </button>
         <button class="week-today-btn" @click="goCurrentWeek">今天</button>
+        <button class="week-add-course-btn" @click="$emit('addCourse')">+ 课程</button>
       </div>
     </div>
     <div class="week-header">
@@ -59,8 +60,8 @@
           <template v-for="item in getDayCards(day.date).items" :key="item.id">
             <!-- 课程块：无打勾，显示教室+时间 -->
             <div v-if="item.isCourse" class="course-card" @click="$emit('selectTask', item.id)">
-              <span class="course-title">{{ item.courseLocation ? '[' + item.courseLocation + '] ' : '' }}{{ item.title }}</span>
-              <span class="course-time">{{ item.courseStartTime }}–{{ item.courseEndTime }}</span>
+              <span class="course-title">{{ item.title }}</span>
+              <span class="course-meta">{{ item.courseLocation ? '[' + item.courseLocation + ']' : '' }} {{ item.courseStartTime }}–{{ item.courseEndTime }}</span>
             </div>
             <!-- 普通任务块 -->
             <div v-else class="task-card" :class="'p-' + item.priority" @click="$emit('selectTask', item.id)">
@@ -124,16 +125,33 @@
               :class="[t.status === 'completed' ? 'task-done' : '', 'p-' + (t.priority || 'none'), (t.priority || 'none') === 'none' ? cell.period.section : '', t.isCourse ? 'course' : '']"
               @click.stop="$emit('selectTask', t.id)"
             >
-              <span v-if="t.isCourse" class="wc-task-t">{{ t.courseLocation ? '[' + t.courseLocation + '] ' : '' }}{{ t.title }}</span>
+              <template v-if="t.isCourse">
+                <span class="wc-course-name">{{ t.title }}</span>
+                <span class="wc-course-loc">{{ t.courseLocation ? '[' + t.courseLocation + ']' : '' }}</span>
+              </template>
               <span v-else class="wc-task-t">{{ t.title }}</span>
             </div>
             <div v-if="cell.allTasks.length === 0" class="wc-empty"></div>
-            <div v-if="cell.hiddenCount > 0" class="wc-bubble" @click.stop="handleCellClick(row.day.date, cell.period)">{{ cell.hiddenCount }}+</div>
+            <div v-if="cell.hiddenCount > 0" class="wc-bubble" @click.stop="openOverflow(cell.hiddenTasks)">{{ cell.hiddenCount }}</div>
           </div>
         </div>
       </div>
     </div>
   </div>
+  <!-- 溢出任务弹窗 -->
+  <teleport to="body">
+    <div v-if="overflowVisible" class="overflow-overlay" @click.self="closeOverflow">
+      <div class="overflow-panel">
+        <div class="overflow-title">该时段任务</div>
+        <div class="overflow-list">
+          <div v-for="t in overflowTasks" :key="t.id" class="overflow-item" @click="closeOverflow(); $emit('selectTask', t.id)">
+            <span class="overflow-name">{{ t.isCourse ? t.title + (t.courseLocation ? '[' + t.courseLocation + ']' : '') : t.title }}</span>
+          </div>
+        </div>
+        <button class="overflow-close" @click="closeOverflow">关闭</button>
+      </div>
+    </div>
+  </teleport>
 </template>
 
 <script setup lang="ts">
@@ -180,6 +198,11 @@ const props = defineProps<{
   selectedDate?: string
 }>()
 
+const overflowTasks = ref<Task[]>([])
+const overflowVisible = ref(false)
+function openOverflow(tasks: Task[]) { overflowTasks.value = tasks; overflowVisible.value = true }
+function closeOverflow() { overflowVisible.value = false; overflowTasks.value = [] }
+
 const emit = defineEmits<{
   (e: 'selectDate', date: string): void
   (e: 'selectTask', id: string): void
@@ -187,6 +210,8 @@ const emit = defineEmits<{
   (e: 'toggleTask', id: string): void
   (e: 'deleteTask', id: string): void
   (e: 'update:currentDate', date: string): void
+  (e: 'showOverflow', tasks: Task[]): void
+  (e: 'addCourse'): void
 }>()
 
 const weekDays = computed(() => {
@@ -286,9 +311,7 @@ function getRegularTasksForDate(dateStr: string): Task[] {
     })
 }
 
-// ── 桌面端：课程 + 任务统一显示，最多3条 ──
-const MAX_VISIBLE = 3
-
+// ── 桌面端：课程 + 任务统一显示（不限量） ──
 interface DayCards {
   date: string
   items: Task[]
@@ -298,6 +321,10 @@ interface DayCards {
 
 const dayCardsMap = computed(() => {
   const map: Record<string, DayCards> = {}
+  const totalCourses = props.tasks.filter(t => t.isCourse).length
+  if (totalCourses > 0) {
+    console.log(`[WeekView] props.tasks 中共 ${totalCourses} 门课程`)
+  }
   for (const day of weekDays.value) {
     const date = parseISO(day.date)
     const dow = date.getDay() // 0=周日
@@ -306,11 +333,20 @@ const dayCardsMap = computed(() => {
     const courses = props.tasks.filter(t => {
       if (t.deletedAt || !t.isCourse) return false
       if (t.isSpanning) return false
+      const matchDay = t.courseDay === dow
+      const matchFrom = !t.courseValidFrom || day.date >= t.courseValidFrom
+      const matchTo = !t.courseValidTo || day.date <= t.courseValidTo
+      if (!matchDay) console.log(`[WeekView] ${day.date} 课程"${t.title}" courseDay=${t.courseDay} dow=${dow} 不匹配`)
+      if (matchDay && !matchFrom) console.log(`[WeekView] ${day.date} 课程"${t.title}" 未到生效期 ${t.courseValidFrom}`)
+      if (matchDay && matchFrom && !matchTo) console.log(`[WeekView] ${day.date} 课程"${t.title}" 已过有效期 ${t.courseValidTo}`)
       if (t.courseDay !== dow) return false
       if (t.courseValidFrom && day.date < t.courseValidFrom) return false
       if (t.courseValidTo && day.date > t.courseValidTo) return false
       return true
     })
+    if (courses.length > 0) {
+      console.log(`[WeekView] ${day.date} 有 ${courses.length} 门课程:`, courses.map(c => c.title))
+    }
     courses.sort((a, b) => (a.courseStartTime || '').localeCompare(b.courseStartTime || ''))
 
     // 普通任务
@@ -319,8 +355,8 @@ const dayCardsMap = computed(() => {
     const all = [...courses, ...regulars]
     map[day.date] = {
       date: day.date,
-      items: all.slice(0, MAX_VISIBLE),
-      hiddenCount: Math.max(0, all.length - MAX_VISIBLE),
+      items: all,
+      hiddenCount: 0,
       isEmpty: all.length === 0,
     }
   }
@@ -382,7 +418,7 @@ function handleCellClick(date: string, p: PeriodCfg) {
 /** 每格最多3个任务 */
 const MAX_PER_CELL = 3
 
-interface CellData { period: PeriodCfg; allTasks: Task[]; hiddenCount: number }
+interface CellData { period: PeriodCfg; allTasks: Task[]; hiddenTasks: Task[]; hiddenCount: number }
 interface RowData { day: typeof weekDays.value[0]; cells: CellData[] }
 const rowData = computed<RowData[]>(() => {
   const dps = displayPeriods.value
@@ -403,10 +439,14 @@ const rowData = computed<RowData[]>(() => {
       if (t.isCourse) {
         const courseDate = parseISO(dateStr)
         const dow = courseDate.getDay() // 0=周日
+        const matchDay = t.courseDay === dow
+        const matchFrom = !t.courseValidFrom || dateStr >= t.courseValidFrom
+        const matchTo = !t.courseValidTo || dateStr <= t.courseValidTo
+        if (!matchDay) console.log(`[WeekView-mobile] ${dateStr} 课程"${t.title}" courseDay=${t.courseDay} dow=${dow} 不匹配`)
+        if (matchDay && !matchFrom) console.log(`[WeekView-mobile] ${dateStr} 课程"${t.title}" 未到生效期 ${t.courseValidFrom}`)
         if (t.courseDay !== dow) continue
         if (t.courseValidFrom && dateStr < t.courseValidFrom) continue
         if (t.courseValidTo && dateStr > t.courseValidTo) continue
-        // 用 courseStartTime 作为时间段匹配依据
         timed.push({ ...t, dueTime: t.courseStartTime || null })
         continue
       }
@@ -430,16 +470,34 @@ const rowData = computed<RowData[]>(() => {
     const cells: CellData[] = dps.map(p => ({
       period: p,
       allTasks: [] as Task[],
+      hiddenTasks: [] as Task[],
       hiddenCount: 0,
     }))
 
     for (const t of timed) {
-      // 找这个任务属于哪个格子
+      // 课程：按起止时间匹配所有跨时段
+      if (t.isCourse) {
+        const startTime = t.courseStartTime || ''
+        const endTime = t.courseEndTime || ''
+        for (const cell of cells) {
+          if (endTime > cell.period.start && startTime < cell.period.end) {
+            if (cell.allTasks.length < MAX_PER_CELL) {
+              cell.allTasks.push(t)
+            } else {
+              cell.hiddenTasks.push(t)
+              cell.hiddenCount++
+            }
+          }
+        }
+        continue
+      }
+      // 普通任务：只匹配一个时段
       const cell = cells.find(c => t.dueTime! >= c.period.start && t.dueTime! < c.period.end)
       if (!cell) continue
       if (cell.allTasks.length < MAX_PER_CELL) {
         cell.allTasks.push(t)
       } else {
+        cell.hiddenTasks.push(t)
         cell.hiddenCount++
       }
     }
@@ -549,6 +607,13 @@ const rowData = computed<RowData[]>(() => {
   text-align: center;
 }
 
+.week-add-course-btn {
+  padding: var(--spacing-xs) var(--spacing-sm); border-radius: var(--radius-md);
+  font-size: var(--font-size-sm); color: #fff;
+  background: #6B8FA3; border: none; cursor: pointer; white-space: nowrap;
+  margin-left: auto;
+}
+.week-add-course-btn:hover { filter: brightness(1.1); }
 .week-today-btn {
   padding: 2px var(--spacing-md);
   border-radius: var(--radius-md);
@@ -661,10 +726,12 @@ const rowData = computed<RowData[]>(() => {
 /* ---- 课程卡片（桌面端） ---- */
 .course-card {
   border-radius: var(--radius-md);
-  padding: var(--spacing-xs) var(--spacing-sm);
+  padding: 2px 6px;
   cursor: pointer;
   transition: transform 0.12s, box-shadow 0.12s;
   flex-shrink: 0;
+  display: flex;
+  flex-direction: column;
   background: color-mix(in srgb, #6B8FA3 20%, var(--color-bg));
   border-left: 3px solid #6B8FA3;
 }
@@ -676,17 +743,31 @@ const rowData = computed<RowData[]>(() => {
   font-size: var(--font-size-xs);
   color: var(--color-text);
   font-weight: 500;
+  line-height: 1.3;
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
   display: block;
 }
-.course-time {
+.course-meta {
   font-size: 10px;
   color: var(--color-text-muted);
   display: block;
-  margin-top: 1px;
+  line-height: 1.2;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
+
+/* ── 溢出任务弹窗 ── */
+.overflow-overlay { position: fixed; inset: 0; background: var(--color-overlay); z-index: 9500; display: flex; align-items: center; justify-content: center; padding: 24px; }
+.overflow-panel { width: 100%; max-width: 320px; background: var(--color-surface); border-radius: var(--radius-lg); overflow: hidden; box-shadow: 0 8px 32px var(--color-shadow-heavy); }
+.overflow-title { padding: var(--spacing-lg); font-size: var(--font-size-md); font-weight: 600; color: var(--color-text); border-bottom: 1px solid var(--color-border-light); }
+.overflow-list { max-height: 240px; overflow-y: auto; }
+.overflow-item { padding: var(--spacing-sm) var(--spacing-lg); cursor: pointer; font-size: var(--font-size-md); color: var(--color-text); transition: background 0.15s; }
+.overflow-item:hover { background: var(--color-surface-hover); }
+.overflow-name { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; display: block; }
+.overflow-close { width: 100%; padding: var(--spacing-sm); border: none; border-top: 1px solid var(--color-border-light); background: transparent; color: var(--color-primary); font-size: var(--font-size-md); cursor: pointer; }
 
 /* ---- 溢出气泡（桌面端） ---- */
 .overflow-badge {
@@ -967,7 +1048,9 @@ const rowData = computed<RowData[]>(() => {
   .wc-task.p-none.afternoon  { background: #DCD0C0; color: #4A4038; }
   .wc-task.p-none.evening    { background: #D0C8D8; color: #403850; }
   .wc-task.task-done { opacity: 0.3; text-decoration: line-through; }
-  .wc-task.course { background: #6B8FA3; color: #fff; font-weight: 700; }
+  .wc-task.course { background: #6B8FA3; color: #fff; font-weight: 700; display: flex; flex-direction: column; gap: 0; padding: 1px 2px; line-height: 1.2; }
+  .wc-course-name { font-size: 10px; font-weight: 600; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .wc-course-loc { font-size: 9px; opacity: 0.85; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 
   .wc-task-t {
     display: block;
@@ -979,17 +1062,21 @@ const rowData = computed<RowData[]>(() => {
   /* ── 溢出泡泡 ── */
   .wc-bubble {
     position: absolute;
-    top: -1px;
-    right: -1px;
+    top: 0;
+    right: 0;
+    z-index: 10;
     background: var(--color-danger);
     color: #fff;
-    font-size: 9px;
-    font-weight: 700;
-    min-width: 18px;
-    height: 18px;
-    border-radius: 9px;
+    font-size: 8px;
+    font-weight: 600;
+    min-width: 14px;
+    height: 14px;
+    border-radius: 7px;
     display: flex;
     align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    pointer-events: auto;
     justify-content: center;
     padding: 0 4px;
     z-index: 10;

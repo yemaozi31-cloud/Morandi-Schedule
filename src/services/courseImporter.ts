@@ -20,6 +20,7 @@ export interface ImportedCourse {
   validFrom: string       // YYYY-MM-DD
   validTo: string         // YYYY-MM-DD
   description?: string
+  teacher?: string        // 从 DESCRIPTION 第一行提取
 }
 
 /**
@@ -44,25 +45,30 @@ export function parseICS(icsContent: string): ImportedCourse[] {
 
       // 解析 RRULE 获取截止日期
       let validTo = ''
-      const rrule = vevent.getFirstPropertyValue('rrule') as any
-      if (rrule && rrule.until) {
-        validTo = ICAL.Time.fromString(rrule.until).toJSDate().toISOString().slice(0, 10)
-      }
+      try {
+        const rrule = vevent.getFirstPropertyValue('rrule') as any
+        if (rrule && rrule.until) {
+          const until = rrule.until
+          validTo = typeof until.toJSDate === 'function'
+            ? until.toJSDate().toISOString().slice(0, 10)
+            : String(until).slice(0, 10)
+        }
+      } catch {}
 
-      // 有效日期（没有 RRULE 就用 DTSTART 当天）
       const validFrom = dtstart.toJSDate().toISOString().slice(0, 10)
-      if (!validTo) validTo = validFrom
+      // 没有 UNTIL 就不限制截止日期（设为空，周视图不拦截）
+      if (!validTo) validTo = ''
 
       courses.push({
         title: event.summary || '未命名课程',
-        // ICAL: 1=周一..7=周日 → 我们: 0=周日..6=周六
-        dayOfWeek: dtstart.dayOfWeek === 7 ? 0 : dtstart.dayOfWeek,
+        dayOfWeek: dtstart.toJSDate().getDay(), // 0=周日, 1=周一...
         startTime: dtstart.toJSDate().toTimeString().slice(0, 5),
         endTime: dtend.toJSDate().toTimeString().slice(0, 5),
         location: event.location || '',
         validFrom,
         validTo,
-        description: event.description || ''
+        description: event.description || '',
+        teacher: event.description ? event.description.split('\\n')[0] : ''
       })
     }
   } catch (e) {
@@ -103,6 +109,7 @@ export async function importCourses(courses: ImportedCourse[]): Promise<{ succes
         courseStartTime: course.startTime,
         courseEndTime: course.endTime,
         courseLocation: course.location,
+        courseTeacher: course.teacher,
         courseValidFrom: course.validFrom,
         courseValidTo: course.validTo,
         description: course.description,
