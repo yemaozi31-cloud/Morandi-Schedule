@@ -51,6 +51,15 @@ export async function getDB(): Promise<IDBPDatabase> {
           sessionStore.createIndex('startedAt', 'startedAt')
         }
       }
+
+      // 版本 3: sync_queue（离线操作队列）
+      if (oldVersion < 3) {
+        if (!db.objectStoreNames.contains('sync_queue')) {
+          const queueStore = db.createObjectStore('sync_queue', { keyPath: 'id' })
+          queueStore.createIndex('createdAt', 'createdAt')
+          queueStore.createIndex('status', 'status')
+        }
+      }
     }
   })
 

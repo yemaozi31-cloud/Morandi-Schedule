@@ -2,7 +2,7 @@
  * 自动同步器
  * 所有数据写操作完成后触发，防抖 2 秒后 push 到 WebDAV
  */
-import { pushToWebDAV } from './webdavSync'
+import { pushToWebDAV, pullFromWebDAV } from './webdavSync'
 import { useSettingsStore } from '@/stores/settingsStore'
 
 let timer: ReturnType<typeof setTimeout> | null = null
@@ -17,11 +17,40 @@ export function triggerAutoSync(): void {
       const config = settingsStore.syncConfig
       if (!config.webdavUrl || !config.nickname) return
       if (!config.autoSync) return
-      // 配置没变就不重复 push（防抖期间用户可能改了配置）
+      // 先上传本地数据
       await pushToWebDAV(config)
-      console.log('[AutoSync] 数据已推送至云端')
+      // 再拉取远程变更（双向同步）
+      await pullFromWebDAV(config).catch(() => {})
+      console.log('[AutoSync] 双向同步完成')
     } catch (e) {
       console.warn('[AutoSync] 推送失败:', e)
     }
-  }, 2000)
+  }, 300)
+}
+
+// ─── 后台轮询（每 5 分钟拉取远程变更） ──
+let pollTimer: ReturnType<typeof setInterval> | null = null
+const POLL_INTERVAL = 5 * 60 * 1000 // 5 分钟
+
+export function startBackgroundPolling(): void {
+  if (pollTimer) return
+  pollTimer = setInterval(async () => {
+    try {
+      const settingsStore = useSettingsStore()
+      const config = settingsStore.syncConfig
+      if (!config.webdavUrl || !config.autoSync) return
+      // 后台轮询只拉取不推送，避免无意义上传
+      await pullFromWebDAV(config).catch(() => {})
+      console.log('[AutoSync] 后台轮询完成')
+    } catch {}
+  }, POLL_INTERVAL)
+  console.log(`[AutoSync] 后台轮询已启动，间隔 ${POLL_INTERVAL / 1000}s`)
+}
+
+export function stopBackgroundPolling(): void {
+  if (pollTimer) {
+    clearInterval(pollTimer)
+    pollTimer = null
+  }
+  console.log('[AutoSync] 后台轮询已停止')
 }

@@ -35,7 +35,7 @@ export const PRIORITY_OPTIONS = [
 ] as const
 
 export const DB_NAME = 'morandi-schedule-db'
-export const DB_VERSION = 2
+export const DB_VERSION = 3
 
 // ─── WebDAV 同步 ─────────────────────────────────────────────
 /** 云端同步文件名 */
@@ -49,7 +49,7 @@ export const SYNC_STORE_NAMES = ['tasks', 'tags', 'habits', 'habitCheckIns', 'po
 /** WebDAV 默认配置 */
 export const DEFAULT_SYNC_CONFIG = {
   enabled: false,
-  autoSync: false,
+  autoSync: true,
   lastSyncAt: null,
   webdavUrl: '',
   webdavUsername: '',

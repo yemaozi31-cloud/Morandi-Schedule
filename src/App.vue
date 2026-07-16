@@ -36,6 +36,8 @@ import { useHabitStore } from '@/stores/habitStore'
 import { usePomodoroStore } from '@/stores/pomodoroStore'
 import { useUiStore } from '@/stores/uiStore'
 import NaiveBridge from '@/components/common/NaiveBridge.vue'
+import { startBackgroundPolling, stopBackgroundPolling } from '@/services/autoSync'
+import { startOfflineMonitor, stopOfflineMonitor } from '@/services/offlineQueue'
 import { initKeyboardService, registerShortcut, destroyKeyboardService } from '@/services/keyboardService'
 import { startReminderScheduler, stopReminderScheduler, clearNotifiedTask, notifDenied, dismissNotifBanner } from '@/services/reminderService'
 const showNotifBanner = notifDenied // 本地 ref 引用，模板才能用
@@ -104,6 +106,11 @@ onMounted(async () => {
         sync(settingsStore.syncConfig).catch(() => {})
       } catch {}
     }
+
+    // 启动后台轮询（每 5 分钟拉取远程变更）
+    startBackgroundPolling()
+    // 启动离线操作队列监控
+    startOfflineMonitor()
   } catch (e) {
     console.error('Failed to load initial data:', e)
     window.__message?.error('数据加载失败，请刷新重试')
@@ -115,6 +122,8 @@ onMounted(async () => {
 onUnmounted(() => {
   stopReminderScheduler()
   destroyKeyboardService()
+  stopBackgroundPolling()
+  stopOfflineMonitor()
 })
 
 const naiveTheme = computed(() => {
