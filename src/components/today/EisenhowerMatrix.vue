@@ -21,6 +21,8 @@
             @toggle="handleToggle"
             @select="handleEdit"
             @delete="handleDelete"
+            @drag-start="(id, ev) => onDragStart(ev, id)"
+            @drag-end="onDragEnd"
           />
           <div v-if="tasks[q.key].length === 0" class="cell-empty">空</div>
         </div>

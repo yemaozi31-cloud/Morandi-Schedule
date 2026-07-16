@@ -108,7 +108,8 @@ function onDragEnd() {
 .task-delete:hover :deep(svg) { color: var(--color-danger) !important; }
 
 @media (max-width: 767px) {
-  .task-card { padding: 4px 6px; min-height: 28px; }
+  .task-card { padding: 4px 6px !important; min-height: 28px !important; }
+  .task-title { font-size: 12px !important; }
   .task-delete { opacity: 0.6; }
 }
 .task-card.completed { opacity: 0.55; }

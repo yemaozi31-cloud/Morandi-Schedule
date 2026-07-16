@@ -42,7 +42,7 @@
             v-for="task in day.regularTasks.slice(0, Math.max(0, 4 - day.spanningTasks.length))"
             :key="task.id"
             class="task-bar"
-            :class="'p-' + task.priority"
+            :class="['p-' + task.priority, { completed: task.status === 'completed' }]"
             :title="task.title"
             @click.stop="handleTaskClick(task.id)"
           >{{ task.title }}</div>
@@ -73,7 +73,7 @@
               v-for="t in day.timeTasks"
               :key="t.id"
               class="mc-strip"
-              :class="[t.status === 'completed' ? 'mc-done' : '', 'p-' + (t.priority || 'none'), (t.priority || 'none') === 'none' ? getSection(t.dueTime) : '']"
+              :class="[t.status === 'completed' ? 'mc-done completed' : '', 'p-' + (t.priority || 'none'), (t.priority || 'none') === 'none' ? getSection(t.dueTime) : '']"
               :title="t.title + (t.dueTime ? ' ' + t.dueTime : '')"
               @click.stop="handleTaskClick(t.id)"
             >
@@ -861,6 +861,11 @@ onMounted(() => {
   .weekday-header, .month-grid { display: none; }
   .mc-card { display: flex; }
 }
+
+/* 月视图已完成任务 */
+.task-bar.completed { opacity: 0.5; text-decoration: line-through; color: var(--color-text-muted); }
+.mc-strip.completed { opacity: 0.5; }
+.mc-strip.completed .mc-strip-title { text-decoration: line-through; color: var(--color-text-muted); }
 </style>
 /* 鈹€鈹€ 鎵嬫満绔湀瑙嗗浘鍗＄墖 鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€ */
 .mc-card { display: none; }
