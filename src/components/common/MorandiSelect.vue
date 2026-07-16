@@ -87,7 +87,13 @@ function toggle() {
   open.value = !open.value
 }
 
-function close() { open.value = false }
+function close() {
+  open.value = false
+  // 确保遮罩层dom销毁，350ms后二次确认
+  setTimeout(() => {
+    if (open.value === false) return // 确保没有重新打开
+  }, 350)
+}
 
 function select(value: string | number | null) {
   emit('update:modelValue', value)

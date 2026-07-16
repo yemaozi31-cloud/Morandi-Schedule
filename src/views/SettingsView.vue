@@ -67,7 +67,7 @@
               </div>
               <div class="about-row">
                 <span class="about-label">版本</span>
-                <span class="about-value">v0.4.4</span>
+                <span class="about-value">v0.4.5</span>
               </div>
               <div class="about-row">
                 <span class="about-label">技术栈</span>
