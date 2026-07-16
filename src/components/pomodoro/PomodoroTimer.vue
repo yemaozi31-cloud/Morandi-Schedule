@@ -20,7 +20,7 @@
         {{ opt }}分
       </button>
       <div class="custom-duration">
-        <MorandiNumberInput v-model="customText" :min="1" :max="180" class="duration-input" placeholder="自定义" @input="onCustomInput" />
+        <input type="number" class="duration-input" v-model="customText" placeholder="自定义" @input="onCustomInput" min="1" max="180" />
         <span class="duration-unit">分</span>
       </div>
     </div>
@@ -54,7 +54,6 @@
 <script setup lang="ts">
 import { computed, ref } from 'vue'
 import { usePomodoroStore } from '@/stores/pomodoroStore'
-import MorandiNumberInput from '@/components/common/MorandiNumberInput.vue'
 
 const store = usePomodoroStore()
 

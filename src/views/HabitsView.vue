@@ -58,22 +58,22 @@
                 <div class="form-row">
                   <div class="form-group flex-1">
                     <label>频率</label>
-                    <MorandiSelect v-model="form.frequency" :options="[
-                      { value: 'daily', label: '每天' },
-                      { value: 'weekly', label: '每周' },
-                      { value: 'monthly', label: '每月' }
-                    ]" placeholder="选择频率" />
+                    <select v-model="form.frequency">
+                      <option value="daily">每天</option>
+                      <option value="weekly">每周</option>
+                      <option value="monthly">每月</option>
+                    </select>
                   </div>
                   <div class="form-group flex-1">
                     <label>目标量</label>
-                    <MorandiNumberInput v-model="form.target" :min="1" />
+                    <input type="number" v-model.number="form.target" min="1" />
                   </div>
                   <div class="form-group flex-1">
                     <label>单位</label>
-                    <MorandiSelect v-model="form.unit" :options="[
-                      { value: 'times', label: '次' },
-                      { value: 'minutes', label: '分钟' }
-                    ]" placeholder="选择单位" />
+                    <select v-model="form.unit">
+                      <option value="times">次</option>
+                      <option value="minutes">分钟</option>
+                    </select>
                   </div>
                 </div>
                 <div class="form-group">
@@ -112,8 +112,6 @@ import HabitHeatmap from '@/components/habits/HabitHeatmap.vue'
 import EmptyState from '@/components/common/EmptyState.vue'
 import Icon from '@/components/common/Icon.vue'
 import MobileBackLink from '@/components/common/MobileBackLink.vue'
-import MorandiSelect from '@/components/common/MorandiSelect.vue'
-import MorandiNumberInput from '@/components/common/MorandiNumberInput.vue'
 
 const habitStore = useHabitStore()
 

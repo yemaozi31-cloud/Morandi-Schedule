@@ -130,23 +130,6 @@ const quickAddInput = ref<HTMLInputElement>()
 const habitsExpand = ref(true)
 
 
-function showConfirm(title: string, message: string, onConfirm: () => void) {
-  if (window.__dialog) {
-    window.__dialog.warning({
-      title,
-      content: message,
-      positiveText: '确认',
-      negativeText: '取消',
-      onPositiveClick: onConfirm
-    })
-  } else {
-    console.warn('[showConfirm] __dialog 不可用，降级到原生 confirm')
-    if (confirm(`${title}\n${message}`)) {
-      onConfirm()
-    }
-  }
-}
-
 const todayHabits = computed(() =>
   habitStore.sortedHabits
 )
@@ -228,18 +211,22 @@ async function handleToggle(taskId: string) {
   }
 }
 
-function handleDelete(taskId: string) {
+async function handleDelete(taskId: string) {
   console.log('[TodayView] handleDelete 被调用:', taskId)
   const task = taskStore.getTaskById(taskId)
   if (!task) return
-  showConfirm('删除任务', `确认删除任务"${task.title}"？此操作不可撤销。`, async () => {
-    try {
-      await taskStore.deleteTask(taskId)
-      window.__message?.success('任务已删除')
-    } catch {
-      window.__message?.error('删除失败，请重试')
-    }
+  const { showConfirm } = await import('@/utils/confirm')
+  const confirmed = await showConfirm({
+    title: '删除任务',
+    content: `确认删除任务"${task.title}"？此操作不可撤销。`
   })
+  if (!confirmed) return
+  try {
+    await taskStore.deleteTask(taskId)
+    window.__message?.success('任务已删除')
+  } catch {
+    window.__message?.error('删除失败，请重试')
+  }
 }
 
 async function onHabitChecked(habitId: string) {

@@ -28,38 +28,41 @@
         <template v-if="mode === 'visual'">
           <div class="filter-row">
             <label>状态</label>
-            <MorandiSelect v-model="localFilters.status" class="select-wrapper" :options="[
-              { value: '', label: '全部' },
-              { value: 'pending', label: '未完成' },
-              { value: 'completed', label: '已完成' },
-              { value: 'cancelled', label: '已取消' }
-            ]" placeholder="筛选状态" />
+            <select v-model="localFilters.status" class="select-wrapper">
+              <option value="">全部</option>
+              <option value="pending">未完成</option>
+              <option value="completed">已完成</option>
+              <option value="cancelled">已取消</option>
+            </select>
           </div>
           <div class="filter-row">
             <label>优先级</label>
-            <MorandiSelect v-model="localFilters.priority" class="select-wrapper" :options="[
-              { value: '', label: '全部' },
-              { value: 'urgent', label: '紧急' },
-              { value: 'high', label: '高' },
-              { value: 'medium', label: '中' },
-              { value: 'low', label: '低' },
-              { value: 'none', label: '无' }
-            ]" placeholder="筛选优先级" />
+            <select v-model="localFilters.priority" class="select-wrapper">
+              <option value="">全部</option>
+              <option value="urgent">紧急</option>
+              <option value="high">高</option>
+              <option value="medium">中</option>
+              <option value="low">低</option>
+              <option value="none">无</option>
+            </select>
           </div>
           <div class="filter-row">
             <label>标签</label>
-            <MorandiSelect v-model="localFilters.tagId" class="select-wrapper" :options="tagOptions" placeholder="筛选标签" />
+            <select v-model="localFilters.tagId" class="select-wrapper">
+              <option value="">全部</option>
+              <option v-for="tag in tagStore.sortedTags" :key="tag.id" :value="tag.id">{{ tag.name }}</option>
+            </select>
           </div>
           <div class="filter-row">
             <label>日期</label>
-            <MorandiSelect v-model="localFilters.dateRange" class="select-wrapper" :options="[
-              { value: '', label: '全部' },
-              { value: 'today', label: '今天' },
-              { value: 'tomorrow', label: '明天' },
-              { value: 'thisWeek', label: '本周' },
-              { value: 'overdue', label: '已过期' },
-              { value: 'noDate', label: '无日期' }
-            ]" placeholder="筛选日期" />
+            <select v-model="localFilters.dateRange" class="select-wrapper">
+              <option value="">全部</option>
+              <option value="today">今天</option>
+              <option value="tomorrow">明天</option>
+              <option value="thisWeek">本周</option>
+              <option value="overdue">已过期</option>
+              <option value="noDate">无日期</option>
+            </select>
           </div>
         </template>
 
@@ -103,8 +106,6 @@ import { ref, reactive, computed, watch } from 'vue'
 import { useTaskStore } from '@/stores/taskStore'
 import { useTagStore } from '@/stores/tagStore'
 import Icon from '@/components/common/Icon.vue'
-import MorandiSelect from '@/components/common/MorandiSelect.vue'
-
 const taskStore = useTaskStore()
 const tagStore = useTagStore()
 
@@ -118,11 +119,6 @@ const localFilters = reactive({
   tagId: '',
   dateRange: ''
 })
-
-const tagOptions = computed(() => [
-  { value: '', label: '全部' },
-  ...tagStore.sortedTags.map(t => ({ value: t.id, label: t.name }))
-])
 
 const activeChips = ['today', 'p1', '@工作', 'overdue', '!completed', 'tomorrow', 'noDate']
 

@@ -38,13 +38,13 @@
           <button class="quick-add-btn" @click="handleQuickAdd" :disabled="!quickText.trim()">添加</button>
         </div>
         <div class="quick-options">
-          <MorandiSelect v-model="quickPriority" class="quick-select" :options="[
-            { value: 'none', label: '优先级' },
-            { value: 'low', label: '低' },
-            { value: 'medium', label: '中' },
-            { value: 'high', label: '高' },
-            { value: 'urgent', label: '紧急' }
-          ]" placeholder="优先级" />
+          <select v-model="quickPriority" class="quick-select">
+            <option value="none">优先级</option>
+            <option value="low">低</option>
+            <option value="medium">中</option>
+            <option value="high">高</option>
+            <option value="urgent">紧急</option>
+          </select>
           <MorandiDatePicker v-model="quickDueDate" class="quick-date" clearable />
         </div>
         <div class="recent-tasks" v-if="recent.length > 0">
@@ -68,7 +68,6 @@ import { nlpParse } from '@/utils/nlpParser'
 import type { Task } from '@/types'
 import Icon from '@/components/common/Icon.vue'
 import MorandiDatePicker from '@/components/common/MorandiDatePicker.vue'
-import MorandiSelect from '@/components/common/MorandiSelect.vue'
 
 defineEmits<{
   (e: 'close'): void

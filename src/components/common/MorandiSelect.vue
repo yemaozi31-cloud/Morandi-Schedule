@@ -109,8 +109,9 @@ function onClickOutside(e: MouseEvent) {
   close()
 }
 
-onMounted(() => document.addEventListener('click', onClickOutside))
-onUnmounted(() => document.removeEventListener('click', onClickOutside))
+// 暂时注释掉全局 click 监听，排查问题
+// onMounted(() => document.addEventListener('click', onClickOutside))
+// onUnmounted(() => document.removeEventListener('click', onClickOutside))
 </script>
 
 <style scoped>
