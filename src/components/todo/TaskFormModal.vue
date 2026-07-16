@@ -322,6 +322,7 @@ watch(() => props.visible, (val) => {
   align-items: center;
   justify-content: center;
   z-index: 7000;
+  padding-top: env(safe-area-inset-top, 0px);
 }
 
 .modal-card {

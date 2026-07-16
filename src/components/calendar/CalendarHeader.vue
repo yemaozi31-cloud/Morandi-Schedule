@@ -21,7 +21,7 @@
       <button class="nav-btn" @click="$emit('next')" aria-label="下一页">
         <Icon name="chevron-right" :size="18" />
       </button>
-      <button class="today-btn" @click="$emit('today')">今天</button>
+      <button class="today-btn" @click="$emit('today')"><span class="today-label">今天</span><span class="today-short">今</span></button>
     </div>
     <div class="header-right">
       <button
@@ -31,7 +31,8 @@
         :class="{ active: currentView === v.key }"
         @click="$emit('update:currentView', v.key)"
       >
-        {{ v.label }}
+        <span class="view-btn-label">{{ v.label }}</span>
+        <Icon :name="viewIcons[v.key]" :size="16" class="view-btn-icon" />
       </button>
     </div>
   </div>
@@ -57,6 +58,12 @@ const emit = defineEmits<{
   (e: 'update:currentView', view: string): void
   (e: 'selectDate', date: string): void
 }>()
+
+const viewIcons: Record<string, string> = {
+  day: 'calendar',
+  week: 'columns',
+  month: 'grid'
+}
 
 const datePickerRef = ref<InstanceType<typeof MorandiDatePicker>>()
 const pickerValue = ref(props.dateValue || '')
@@ -173,4 +180,20 @@ function onDateChange(val: string) {
   color: var(--color-text);
   font-weight: 500;
 }
+
+/* ── 窄屏适配 ────────────────────── */
+@media (max-width: 767px) {
+  .calendar-header { flex-wrap: nowrap; gap: 4px; }
+  .header-title { font-size: var(--font-size-md); min-width: 80px; }
+  .header-left { gap: 2px; }
+  .today-btn { padding: var(--spacing-xs) var(--spacing-sm); font-size: 11px; }
+  .today-label { display: none; }
+  .today-short { display: inline; }
+  .view-btn { padding: var(--spacing-xs); font-size: 11px; }
+  .view-btn-label { display: none; }
+  .view-btn-icon { display: inline-flex; }
+}
+/* 桌面端隐藏图标 */
+.view-btn-icon { display: none; }
+.today-short { display: none; }
 </style>

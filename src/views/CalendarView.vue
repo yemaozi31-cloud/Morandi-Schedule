@@ -127,7 +127,7 @@ import type { Task } from '@/types'
 import { useTaskStore } from '@/stores/taskStore'
 import { useUiStore } from '@/stores/uiStore'
 import { useResponsive } from '@/composables/useResponsive'
-import { format, parseISO, addMonths, addWeeks, addDays, getTodayStr, startOfWeek } from '@/utils/date'
+import { format, parseISO, addMonths, addWeeks, addDays, getTodayStr, startOfWeek, getWeekNumber } from '@/utils/date'
 import { nlpParse } from '@/utils/nlpParser'
 
 import AppLayout from '@/components/layout/AppLayout.vue'
@@ -205,12 +205,13 @@ const mobileViews = [
 
 const headerTitle = computed(() => {
   const d = parseISO(currentDate.value)
-  if (currentView.value === 'month') return format(d, 'yyyy年 M月')
-  const weekdays = ['周日', '周一', '周二', '周三', '周四', '周五', '周六']
-  // 日/周视图显示完整日期+星期，点击可弹出日期选择器
-  const dateStr = selectedDay.value || currentDate.value
-  const dateObj = parseISO(dateStr)
-  return `${format(dateObj, 'M月d日')} ${weekdays[dateObj.getDay()]}`
+  if (currentView.value === 'month') {
+    return isMobile.value ? format(d, 'M月') : format(d, 'yyyy年 M月')
+  }
+  if (currentView.value === 'week') {
+    return isMobile.value ? `第${getWeekNumber(d)}周` : `第${getWeekNumber(d)}周（${format(d, 'yyyy')}）`
+  }
+  return isMobile.value ? format(d, 'M/d') : format(d, 'yyyy年M月d日')
 })
 
 // 月视图任务统计（持续事件跨天显示）

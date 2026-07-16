@@ -155,4 +155,11 @@ async function handleSave(data: any) {
   background: var(--color-primary);
   border: none;
 }
+
+/* 窄屏：看板头部压缩 */
+@media (max-width: 767px) {
+  .kanban-header { flex-wrap: wrap; gap: var(--spacing-xs); }
+  .kanban-header h1 { font-size: var(--font-size-md); }
+  .group-btn, .add-btn { padding: var(--spacing-xs) var(--spacing-sm); font-size: 11px; }
+}
 </style>

@@ -90,7 +90,7 @@
             @input="markDirty"
           />
           <button class="icon-btn" @click="showKey = !showKey" :title="showKey ? '隐藏' : '显示'">
-            <Icon :name="showKey ? 'eye-off' : 'eye'" :size="16" />
+            <Icon :name="showKey ? 'eye' : 'eye-off'" :size="16" />
           </button>
         </div>
       </div>

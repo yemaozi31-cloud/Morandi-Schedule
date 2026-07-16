@@ -65,6 +65,7 @@ const visibleItems = MOBILE_NAV_ITEMS.slice(0, 4)
   flex-direction: column;
   overflow-y: auto;
   padding: var(--spacing-xl);
+  padding-top: env(safe-area-inset-top, 0px);
   min-height: 0;
   background: var(--color-bg);
 }
@@ -126,5 +127,12 @@ const visibleItems = MOBILE_NAV_ITEMS.slice(0, 4)
 
 .more-btn:hover {
   color: var(--color-text);
+}
+
+/* ── 超窄屏：隐藏导航文字，只留图标 ── */
+@media (max-width: 360px) {
+  .mobile-nav-label { display: none; }
+  .mobile-nav-item { gap: 0; padding: 4px; }
+  .mobile-nav-icon { font-size: 20px; }
 }
 </style>

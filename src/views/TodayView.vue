@@ -73,7 +73,6 @@
                 compact
                 @checked="onHabitChecked"
               />
-              <EmptyState v-if="todayHabits.length === 0" title="暂无习惯" icon="target" />
             </div>
           </transition>
         </div>
@@ -494,11 +493,11 @@ async function handleSave(data: any) {
     bottom: 0;
     width: 56px;
     padding: 0;
+    background: transparent;
     color: var(--color-text-muted);
     display: flex;
     align-items: center;
     justify-content: center;
-    border-left: 1px solid var(--color-border-light);
   }
   .habits-accordion {
     width: 100%;

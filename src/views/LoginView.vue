@@ -42,6 +42,10 @@
         </form>
       </template>
     </div>
+    <!-- 齿轮按钮：跳转设置页 -->
+    <button class="gear-btn" @click="router.push('/settings')" title="设置">
+      <Icon name="settings" :size="20" />
+    </button>
   </div>
 </template>
 
@@ -315,6 +319,7 @@ onMounted(() => {
   justify-content: center;
   min-height: 100vh;
   padding: var(--spacing-xl);
+  padding-top: env(safe-area-inset-top, 0px);
   background: var(--color-bg);
 }
 
@@ -511,5 +516,28 @@ onMounted(() => {
   text-align: center;
   font-size: var(--font-size-sm);
   color: var(--color-text-muted);
+}
+
+/* ── 齿轮按钮：跳转设置 ──────────── */
+.gear-btn {
+  position: fixed;
+  bottom: 20px;
+  right: 20px;
+  width: 40px;
+  height: 40px;
+  border-radius: 50%;
+  background: var(--color-surface);
+  border: 1px solid var(--color-border);
+  color: var(--color-text-muted);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  z-index: 100;
+  box-shadow: 0 2px 8px var(--color-shadow);
+}
+.gear-btn:hover {
+  color: var(--color-text);
+  border-color: var(--color-primary);
 }
 </style>

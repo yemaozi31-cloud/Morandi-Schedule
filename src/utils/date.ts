@@ -25,6 +25,14 @@ export function getRelativeDay(dateStr: string): string {
   return formatDate(dateStr, 'M月d日')
 }
 
+export function getWeekNumber(date: Date): number {
+  const d = new Date(Date.UTC(date.getFullYear(), date.getMonth(), date.getDate()))
+  const dayNum = d.getUTCDay() || 7
+  d.setUTCDate(d.getUTCDate() + 4 - dayNum)
+  const yearStart = new Date(Date.UTC(d.getUTCFullYear(), 0, 1))
+  return Math.ceil((((d.getTime() - yearStart.getTime()) / 86400000) + 1) / 7)
+}
+
 export function parseDate(text: string): { date?: string; time?: string } | null {
   // 简单NLP日期解析（完整版在nlpParser.ts）
   const now = new Date()

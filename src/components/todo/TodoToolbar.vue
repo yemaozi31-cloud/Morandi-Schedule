@@ -2,10 +2,10 @@
   <div class="todo-toolbar">
     <div class="toolbar-left">
       <button class="toolbar-btn" :class="{ active: viewMode === 'matrix' }" @click="$emit('update:viewMode', 'matrix')" title="艾森豪威尔矩阵">
-        <Icon name="grid" :size="16" /> 矩阵
+        <Icon name="grid" :size="16" /> <span class="btn-label">矩阵</span>
       </button>
       <button class="toolbar-btn" :class="{ active: viewMode === 'list' }" @click="$emit('update:viewMode', 'list')" title="列表">
-        <Icon name="layers" :size="16" /> 列表
+        <Icon name="layers" :size="16" /> <span class="btn-label">列表</span>
       </button>
     </div>
     <div class="toolbar-center">
@@ -21,10 +21,10 @@
     </div>
     <div class="toolbar-right">
       <button class="toolbar-btn batch-btn" :class="{ active: batchMode }" @click="$emit('toggleBatch')" title="批量操作">
-        <Icon name="check-square" :size="16" /> 多选
+        <Icon name="check-square" :size="16" /> <span class="btn-label">多选</span>
       </button>
       <button class="toolbar-btn primary" @click="$emit('addTask')" title="添加任务">
-        <Icon name="plus" :size="16" /> 新建
+        <Icon name="plus" :size="16" /> <span class="btn-label">新建</span>
       </button>
     </div>
   </div>
@@ -152,5 +152,12 @@ function onInput(e: Event) {
 .toolbar-right {
   display: flex;
   gap: 2px;
+}
+
+/* ── 窄屏：隐藏按钮文字，只留图标 ── */
+@media (max-width: 767px) {
+  .btn-label { display: none; }
+  .toolbar-btn { padding: var(--spacing-xs) var(--spacing-sm); }
+  .toolbar-search { max-width: 120px; }
 }
 </style>

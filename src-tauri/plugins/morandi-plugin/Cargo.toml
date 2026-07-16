@@ -1,0 +1,19 @@
+[package]
+name = "morandi-plugin"
+version = "0.1.0"
+description = "Morandi Schedule Android plugin for share and reminder"
+authors = []
+edition = "2021"
+rust-version = "1.77"
+links = "morandi-plugin"
+
+[lib]
+crate-type = ["lib", "cdylib", "staticlib"]
+
+[build-dependencies]
+tauri-plugin = "2"
+
+[dependencies]
+tauri = { version = "2", features = [] }
+serde = { version = "1", features = ["derive"] }
+serde_json = "1"

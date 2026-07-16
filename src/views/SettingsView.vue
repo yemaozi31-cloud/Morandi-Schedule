@@ -34,6 +34,16 @@
                 {{ changingPwd ? '修改中...' : '确认修改' }}
               </button>
             </div>
+            <div class="action-row">
+              <div class="action-info">
+                <span class="action-label">开机自启动</span>
+                <span class="action-desc">系统启动时自动运行 Morandi Schedule</span>
+              </div>
+              <label class="toggle-switch">
+                <input type="checkbox" v-model="autoStartEnabled" @change="handleAutoStartChange" />
+                <span class="toggle-slider"></span>
+              </label>
+            </div>
           </div>
         </section>
         <section class="settings-section">
@@ -57,7 +67,7 @@
               </div>
               <div class="about-row">
                 <span class="about-label">版本</span>
-                <span class="about-value">v0.4.0</span>
+                <span class="about-value">v0.4.1</span>
               </div>
               <div class="about-row">
                 <span class="about-label">技术栈</span>
@@ -76,7 +86,7 @@
 </template>
 
 <script setup lang="ts">
-import { ref } from 'vue'
+import { ref, onMounted } from 'vue'
 import { useRouter } from 'vue-router'
 import { useSettingsStore } from '@/stores/settingsStore'
 import AppLayout from '@/components/layout/AppLayout.vue'
@@ -92,6 +102,32 @@ const settingsStore = useSettingsStore()
 const isTauri = window.location.protocol.startsWith('tauri') ||
                 window.location.hostname.includes('tauri')
 const safeFetch = isTauri ? tauriFetch : window.fetch.bind(window)
+
+// 开机自启动
+const autoStartEnabled = ref(false)
+
+onMounted(async () => {
+  try {
+    const { isEnabled } = await import('@tauri-apps/plugin-autostart')
+    autoStartEnabled.value = await isEnabled()
+  } catch {
+    // 非 Tauri 环境忽略
+  }
+})
+
+async function handleAutoStartChange() {
+  try {
+    const { enable, disable } = await import('@tauri-apps/plugin-autostart')
+    if (autoStartEnabled.value) {
+      await enable()
+    } else {
+      await disable()
+    }
+  } catch (e) {
+    autoStartEnabled.value = !autoStartEnabled.value // 回滚
+    console.error('自启动设置失败:', e)
+  }
+}
 
 // 密码修改
 const showPasswordForm = ref(false)
@@ -171,6 +207,9 @@ async function handleChangePassword() {
 function handleLogout() {
   localStorage.removeItem('morandi_logged_in')
   localStorage.removeItem('last_page')
+  // 只清除昵称，保留 WebDAV 密码和私钥不清，方便下次直接使用
+  settingsStore.syncConfig.nickname = ''
+  settingsStore.saveSyncConfig()
   router.push('/login')
 }
 </script>
@@ -305,6 +344,45 @@ function handleLogout() {
 }
 .password-form button:disabled {
   opacity: 0.5;
+}
+
+/* 开机自启动 toggle 开关 */
+.toggle-switch {
+  position: relative;
+  display: inline-block;
+  width: 40px;
+  height: 22px;
+  cursor: pointer;
+  flex-shrink: 0;
+}
+.toggle-switch input {
+  opacity: 0;
+  width: 0;
+  height: 0;
+}
+.toggle-slider {
+  position: absolute;
+  inset: 0;
+  background: var(--color-border);
+  border-radius: 22px;
+  transition: background 0.2s;
+}
+.toggle-slider::before {
+  content: '';
+  position: absolute;
+  left: 2px;
+  top: 2px;
+  width: 18px;
+  height: 18px;
+  background: #fff;
+  border-radius: 50%;
+  transition: transform 0.2s;
+}
+.toggle-switch input:checked + .toggle-slider {
+  background: var(--color-primary);
+}
+.toggle-switch input:checked + .toggle-slider::before {
+  transform: translateX(18px);
 }
 
 </style>

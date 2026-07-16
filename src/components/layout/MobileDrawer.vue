@@ -97,6 +97,8 @@ const navGroups = computed(() => {
   display: flex;
   flex-direction: column;
   box-shadow: -2px 0 16px var(--color-shadow-heavy);
+  padding-top: env(safe-area-inset-top, 10px);
+  box-sizing: border-box;
 }
 
 .drawer-header {

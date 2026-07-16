@@ -95,6 +95,7 @@ function handleEdit() {
 
 function handleDelete() {
   if (!task.value) return
+  const id = task.value.id  // 先存到局部变量，防止闭包内 task 变化导致 TypeError
   window.__dialog?.warning({
     title: '删除任务',
     content: `确认删除任务"${task.value.title}"？`,
@@ -102,7 +103,7 @@ function handleDelete() {
     negativeText: '取消',
     onPositiveClick: async () => {
       try {
-        await taskStore.deleteTask(task.value!.id)
+        await taskStore.deleteTask(id)  // 使用局部变量，而非 task.value!.id
         window.__message?.success('已删除')
         close()
       } catch {
@@ -130,6 +131,7 @@ function handleAddNew() {
   display: flex;
   align-items: flex-end;
   justify-content: center;
+  padding-top: env(safe-area-inset-top, 0px);
 }
 @media (min-width: 768px) {
   .detail-overlay { align-items: center; }

@@ -191,6 +191,7 @@ export const useTaskStore = defineStore('tasks', () => {
       await db.set('tasks', task)
       triggerAutoSync()
       tasks.value.set(task.id, task)
+      scheduleAndroidReminder(task)
       return task
     } catch (e) {
       console.error('createTask failed:', e)
@@ -225,6 +226,11 @@ export const useTaskStore = defineStore('tasks', () => {
       await db.set('tasks', updated)
       triggerAutoSync()
       tasks.value.set(id, updated)
+      if (updated.deletedAt || updated.completedAt) {
+        cancelAndroidReminder(id)
+      } else if (updated.reminder) {
+        scheduleAndroidReminder(updated)
+      }
     } catch (e) {
       console.error('updateTask failed:', e)
       throw e
@@ -339,6 +345,41 @@ export const useTaskStore = defineStore('tasks', () => {
 
   function setViewMode(mode: 'matrix' | 'list') {
     viewMode.value = mode
+  }
+
+  // ─── Android 原生闹钟（AlarmManager）对接 ─────────
+  const isTauri = typeof window !== 'undefined' && (
+    '__TAURI__' in window ||
+    '__TAURI_INTERNALS__' in window ||
+    window.location.protocol.startsWith('tauri')
+  )
+
+  async function scheduleAndroidReminder(task: Task) {
+    if (!isTauri || !task.reminder || !task.dueDate) return
+    try {
+      const baseDate = new Date(task.dueDate + 'T' + (task.dueTime || '09:00') + ':00')
+      if (isNaN(baseDate.getTime())) return
+      const triggerMs = task.reminder.type === 'at_time'
+        ? baseDate.getTime()
+        : baseDate.getTime() - (task.reminder.minutes || 0) * 60_000
+      if (triggerMs <= Date.now()) return
+      const { invoke } = await import('@tauri-apps/api/core')
+      invoke('plugin:morandi-plugin|scheduleReminder', {
+        timeMs: triggerMs, title: task.title,
+        body: task.dueDate + (task.dueTime ? ' ' + task.dueTime : ''),
+        id: Math.abs(Array.from(task.id).reduce((h, c) => ((h << 5) - h) + c.charCodeAt(0), 0)) % 100000
+      })
+    } catch {}
+  }
+
+  function cancelAndroidReminder(taskId: string) {
+    if (!isTauri) return
+    try {
+      import('@tauri-apps/api/core').then(({ invoke }) => {
+        const id = Math.abs(Array.from(taskId).reduce((h, c) => ((h << 5) - h) + c.charCodeAt(0), 0)) % 100000
+        invoke('plugin:morandi-plugin|cancelReminder', { id })
+      })
+    } catch {}
   }
 
   return {
