@@ -105,7 +105,7 @@
 </template>
 
 <script setup lang="ts">
-import { onMounted, computed, ref, watch } from 'vue'
+import { onMounted, computed, ref, reactive, watch } from 'vue'
 import { useTaskStore } from '@/stores/taskStore'
 import { useUiStore } from '@/stores/uiStore'
 import { useTagStore } from '@/stores/tagStore'
