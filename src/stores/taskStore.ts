@@ -34,7 +34,7 @@ export const useTaskStore = defineStore('tasks', () => {
   const todayTasks = computed(() => {
     const today = getTodayStr()
     return activeTasks.value.filter(t => {
-      if (t.status === 'completed' || t.status === 'cancelled') return false
+      if (t.status === 'cancelled') return false
       if (t.isSpanning && t.startDate) {
         return today >= t.startDate && today <= t.dueDate
       }

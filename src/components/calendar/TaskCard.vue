@@ -1,7 +1,7 @@
 <template>
   <div
     class="task-card"
-    :class="[`p-${task.priority}`, className, { dragging }]"
+    :class="[`p-${task.priority}`, className, { dragging, completed: task.status === 'completed' }]"
     :draggable="true"
     @dragstart="onDragStart"
     @dragend="onDragEnd"
@@ -71,13 +71,15 @@ function onDragEnd() {
 .task-card.p-none { border-left-color: var(--priority-none-bg); }
 
 .task-toggle {
-  display: flex; flex-shrink: 0;
+  display: flex; align-items: center; justify-content: center;
+  flex-shrink: 0;
   cursor: pointer; padding: 2px;
+  width: 22px; height: 22px;
 }
 
 .task-body {
   flex: 1; min-width: 0;
-  display: flex; align-items: baseline; gap: var(--spacing-sm);
+  display: flex; align-items: center; gap: var(--spacing-sm);
   cursor: pointer; overflow: hidden;
 }
 
@@ -109,4 +111,7 @@ function onDragEnd() {
   .task-card { padding: 8px var(--spacing-sm); min-height: 40px; }
   .task-delete { opacity: 0.6; }
 }
+.task-card.completed { opacity: 0.55; }
+.task-card.completed .task-title { text-decoration: line-through; color: var(--color-text-muted); }
+.task-card.completed .task-toggle { opacity: 0.6; }
 </style>
