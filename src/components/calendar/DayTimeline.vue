@@ -219,13 +219,13 @@ const overdueTasks = computed(() =>
 
 const allDayTasks = computed(() =>
   props.tasks.filter(t =>
-    !t.deletedAt && t.status !== 'completed' && t.dueDate && (!t.dueTime || t.isSpanning)
+    !t.deletedAt && t.dueDate && (!t.dueTime || t.isSpanning)
   )
 )
 
 function tasksInRange(startHour: number, endHour: number) {
   return props.tasks.filter(t => {
-    if (!t.dueDate || !t.dueTime || t.deletedAt || t.status === 'completed') return false
+    if (!t.dueDate || !t.dueTime || t.deletedAt) return false
     if (t.isSpanning) return false
     const hour = parseInt(t.dueTime.split(':')[0])
     return hour >= startHour && hour <= endHour
