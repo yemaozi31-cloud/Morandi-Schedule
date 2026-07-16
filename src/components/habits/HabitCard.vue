@@ -499,4 +499,21 @@ function handleDelete() {
   background: var(--color-primary);
   border: 1px solid color-mix(in srgb, var(--color-primary) 70%, transparent);
 }
+
+/* ── 手机端缩小按钮 ──────────────────────── */
+@media (max-width: 767px) {
+  .compact-checkin {
+    min-width: 40px;
+    padding: 6px 8px;
+    font-size: 11px;
+  }
+  .compact-expand {
+    min-width: 32px;
+    min-height: 28px;
+  }
+  .compact-delete {
+    min-width: 32px;
+    min-height: 28px;
+  }
+}
 </style>

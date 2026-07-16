@@ -51,24 +51,24 @@ function onDragEnd() {
 .task-card {
   display: flex;
   align-items: center;
-  gap: var(--spacing-xs);
-  padding: 6px var(--spacing-sm);
+  gap: 2px;
+  padding: 3px 6px;
   border-radius: var(--radius-md);
   background: var(--color-surface);
   border-left: 3px solid var(--color-border);
   transition: opacity 0.15s, background 0.15s;
   cursor: default;
-  min-height: 32px;
+  min-height: 24px;
   user-select: none;
 }
 .task-card:hover { background: var(--color-surface-hover); }
 .task-card.dragging { opacity: 0.3; }
 
-.task-card.p-urgent { border-left-color: var(--priority-urgent-bg); }
-.task-card.p-high { border-left-color: var(--priority-high-bg); }
-.task-card.p-medium { border-left-color: var(--priority-medium-bg); }
-.task-card.p-low { border-left-color: var(--priority-low-bg); }
-.task-card.p-none { border-left-color: var(--priority-none-bg); }
+.task-card.p-urgent { background: color-mix(in srgb, var(--priority-urgent-bg) 20%, var(--color-surface)); border-left-color: var(--priority-urgent-bg); }
+.task-card.p-high { background: color-mix(in srgb, var(--priority-high-bg) 20%, var(--color-surface)); border-left-color: var(--priority-high-bg); }
+.task-card.p-medium { background: color-mix(in srgb, var(--priority-medium-bg) 20%, var(--color-surface)); border-left-color: var(--priority-medium-bg); }
+.task-card.p-low { background: color-mix(in srgb, var(--priority-low-bg) 20%, var(--color-surface)); border-left-color: var(--priority-low-bg); }
+.task-card.p-none { background: color-mix(in srgb, var(--priority-none-bg) 20%, var(--color-surface)); border-left-color: var(--priority-none-bg); }
 
 .task-toggle {
   display: flex; align-items: center; justify-content: center;
@@ -90,7 +90,7 @@ function onDragEnd() {
 }
 
 .task-title {
-  font-size: var(--font-size-md); color: var(--color-text);
+  font-size: var(--font-size-sm); color: var(--color-text);
   overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
 }
 
@@ -108,7 +108,7 @@ function onDragEnd() {
 .task-delete:hover :deep(svg) { color: var(--color-danger) !important; }
 
 @media (max-width: 767px) {
-  .task-card { padding: 8px var(--spacing-sm); min-height: 40px; }
+  .task-card { padding: 4px 6px; min-height: 28px; }
   .task-delete { opacity: 0.6; }
 }
 .task-card.completed { opacity: 0.55; }

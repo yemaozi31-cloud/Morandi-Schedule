@@ -20,7 +20,7 @@
         {{ opt }}分
       </button>
       <div class="custom-duration">
-        <input type="number" class="duration-input" v-model="customText" placeholder="自定义" @input="onCustomInput" min="1" max="180" />
+        <input type="number" class="duration-input" v-model="customText" placeholder="" @input="onCustomInput" min="1" max="180" />
         <span class="duration-unit">分</span>
       </div>
     </div>
@@ -227,13 +227,14 @@ function startNextPomodoro() {
 
 .duration-input {
   width: 56px;
-  padding: 2px 6px;
+  padding: 2px 10px;
   border: 1px solid var(--color-border);
   border-radius: var(--radius-sm);
   background: var(--color-bg);
-  color: var(--color-text);
-  font-size: 12px;
+  color: var(--color-text-secondary);
+  font-size: var(--font-size-sm);
   text-align: center;
+  cursor: pointer;
   outline: none;
   -moz-appearance: textfield;
 }
