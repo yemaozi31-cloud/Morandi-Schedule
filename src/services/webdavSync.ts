@@ -15,6 +15,26 @@ import { SYNC_FILE_NAME, SYNC_DATA_VERSION, SYNC_STORE_NAMES } from '@/utils/con
 import type { SyncConfig } from '@/types'
 import { encryptSyncData, decryptSyncData } from '@/utils/crypto'
 
+// ─── Tauri 环境下用 @tauri-apps/plugin-http 绕过 CSP ──
+const isTauriEnv = typeof window !== 'undefined' && (
+  window.location.protocol.startsWith('tauri') ||
+  window.location.hostname.includes('tauri')
+)
+
+/** 跨环境 fetch：Tauri 下用 HTTP 插件，浏览器直接用原生 fetch */
+async function safeFetch(input: RequestInfo | URL, init?: RequestInit): Promise<Response> {
+  if (isTauriEnv) {
+    try {
+      const { fetch: tauriFetch } = await import('@tauri-apps/plugin-http')
+      return tauriFetch(input as any, init as any)
+    } catch {
+      // 插件加载失败时回退到原生 fetch
+      return fetch(input, init)
+    }
+  }
+  return fetch(input, init)
+}
+
 // ─── 写入锁（防止并发同步导致文件损坏）
 let pushLock = false
 const pendingPushes: (() => Promise<void>)[] = []
@@ -117,7 +137,7 @@ export async function testConnection(config: SyncConfig): Promise<SyncResult> {
     const url = syncFileUrl(config)
 
     // PROPFIND 是 WebDAV 的标准「ping」方法
-    const res = await fetch(url, {
+    const res = await safeFetch(url, {
       method: 'PROPFIND',
       headers: {
         ...authHeader(config.webdavUsername, config.webdavPassword),
@@ -190,7 +210,7 @@ export async function pushToWebDAV(config: SyncConfig): Promise<SyncResult> {
 
     // 4. PUT 上传到 WebDAV
     const url = syncFileUrl(config)
-    const res = await fetch(url, {
+    const res = await safeFetch(url, {
       method: 'PUT',
       headers: {
         ...authHeader(config.webdavUsername, config.webdavPassword),
@@ -223,7 +243,7 @@ export async function pushToWebDAV(config: SyncConfig): Promise<SyncResult> {
 export async function pullFromWebDAV(config: SyncConfig): Promise<SyncResult> {
   try {
     const url = syncFileUrl(config)
-    const res = await fetch(url, {
+    const res = await safeFetch(url, {
       method: 'GET',
       headers: authHeader(config.webdavUsername, config.webdavPassword)
     })
@@ -363,7 +383,7 @@ export async function discoverUsersFromWebDAV(config: SyncConfig): Promise<strin
     const isTauri = window.location.protocol.startsWith('tauri') ||
                   window.location.hostname.includes('tauri')
     const url = isTauri ? base : new URL(base).pathname
-    const res = await fetch(url, {
+    const res = await safeFetch(url, {
       method: 'PROPFIND',
       headers: {
         Authorization: 'Basic ' + btoa(`${config.webdavUsername}:${config.webdavPassword}`),
@@ -388,7 +408,7 @@ export async function discoverUsersFromWebDAV(config: SyncConfig): Promise<strin
 export async function fetchSharedData(config: SyncConfig): Promise<SharedData> {
   const url = sharedFileUrl(config)
   try {
-    const res = await fetch(url, {
+    const res = await safeFetch(url, {
       headers: { Authorization: 'Basic ' + btoa(`${config.webdavUsername}:${config.webdavPassword}`) }
     })
     // 从目录扫描所有用户
@@ -415,7 +435,7 @@ export async function fetchSharedData(config: SyncConfig): Promise<SharedData> {
 async function saveSharedData(config: SyncConfig, data: SharedData): Promise<boolean> {
   const url = sharedFileUrl(config)
   try {
-    const res = await fetch(url, {
+    const res = await safeFetch(url, {
       method: 'PUT',
       headers: {
         'Content-Type': 'application/json',

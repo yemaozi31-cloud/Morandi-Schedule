@@ -209,9 +209,11 @@ const headerTitle = computed(() => {
     return isMobile.value ? format(d, 'M月') : format(d, 'yyyy年 M月')
   }
   if (currentView.value === 'week') {
-    return isMobile.value ? `第${getWeekNumber(d)}周` : `第${getWeekNumber(d)}周（${format(d, 'yyyy')}）`
+    const start = startOfWeek(d, { weekStartsOn: 1 })
+    const end = addDays(start, 6)
+    return `${start.getDate()}-${end.getDate()}`
   }
-  return isMobile.value ? format(d, 'M/d') : format(d, 'yyyy年M月d日')
+  return isMobile.value ? format(d, 'M.d') : format(d, 'yyyy年M月d日')
 })
 
 // 月视图任务统计（持续事件跨天显示）

@@ -1,0 +1,63 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1024 1024">
+  <defs>
+    <!-- 背景——莫兰迪暖灰 -->
+    <linearGradient id="bg" x1="0" y1="0" x2="0.3" y2="1">
+      <stop offset="0%" stop-color="#E8E3DB"/>
+      <stop offset="100%" stop-color="#DCD5CA"/>
+    </linearGradient>
+    <!-- 色块1：莫兰迪粉 -->
+    <linearGradient id="pink" x1="0" y1="0" x2="0.4" y2="1">
+      <stop offset="0%" stop-color="#DECAC6"/>
+      <stop offset="100%" stop-color="#D0B8B3"/>
+    </linearGradient>
+    <!-- 色块2：莫兰迪绿 -->
+    <linearGradient id="green" x1="0" y1="0" x2="0.4" y2="1">
+      <stop offset="0%" stop-color="#C2CDBA"/>
+      <stop offset="100%" stop-color="#B2BFA9"/>
+    </linearGradient>
+    <!-- 色块3：莫兰迪米白 -->
+    <linearGradient id="cream" x1="0" y1="0" x2="0.3" y2="1">
+      <stop offset="0%" stop-color="#F7F2EC"/>
+      <stop offset="100%" stop-color="#EDE6DC"/>
+    </linearGradient>
+    <!-- 阴影 -->
+    <filter id="shadow1" x="-5%" y="-5%" width="115%" height="130%">
+      <feDropShadow dx="-4" dy="8" stdDeviation="20" flood-color="#8B7D70" flood-opacity="0.12"/>
+    </filter>
+    <filter id="shadow2" x="-5%" y="-5%" width="115%" height="130%">
+      <feDropShadow dx="6" dy="10" stdDeviation="24" flood-color="#8B7D70" flood-opacity="0.15"/>
+    </filter>
+    <filter id="shadow3" x="-5%" y="-5%" width="115%" height="130%">
+      <feDropShadow dx="0" dy="6" stdDeviation="14" flood-color="#8B7D70" flood-opacity="0.10"/>
+    </filter>
+  </defs>
+
+  <!-- 背景 squircle -->
+  <rect width="1024" height="1024" rx="224" fill="url(#bg)"/>
+
+  <!-- === 色块层叠，像调色板/未干的水彩纸 === -->
+
+  <!-- 底层：莫兰迪绿（偏左、稍大） -->
+  <g filter="url(#shadow1)">
+    <rect x="110" y="250" width="590" height="460" rx="56" fill="url(#green)" transform="rotate(-3, 512, 512)"/>
+  </g>
+
+  <!-- 中层：莫兰迪粉（居中、倾斜） -->
+  <g filter="url(#shadow2)">
+    <rect x="290" y="200" width="550" height="500" rx="56" fill="url(#pink)" transform="rotate(2, 512, 512)"/>
+  </g>
+
+  <!-- 顶层：莫兰迪米白（最正、最前） -->
+  <g filter="url(#shadow3)">
+    <rect x="200" y="240" width="530" height="460" rx="44" fill="url(#cream)"/>
+  </g>
+
+  <!-- === 顶层细节：日历横线（轻轻画几道）=== -->
+  <line x1="270" y1="390" x2="660" y2="390" stroke="#DED7CC" stroke-width="3" stroke-linecap="round"/>
+  <line x1="270" y1="430" x2="660" y2="430" stroke="#DED7CC" stroke-width="3" stroke-linecap="round"/>
+  <line x1="270" y1="470" x2="660" y2="470" stroke="#DED7CC" stroke-width="3" stroke-linecap="round"/>
+  <line x1="270" y1="510" x2="660" y2="510" stroke="#DED7CC" stroke-width="3" stroke-linecap="round"/>
+
+  <!-- 日期 "32" -->
+  <text x="465" y="640" font-family="'SF Pro Display', 'Helvetica Neue', system-ui, sans-serif" font-size="130" font-weight="300" fill="#3D3835" text-anchor="middle" letter-spacing="1">32</text>
+</svg>

@@ -3,7 +3,8 @@
     class="section drop-zone"
     :class="{ 'drag-over': dragOverSection === periodKey }"
     @dragover.prevent="emit('dragOver', periodKey)"
-    @dragleave="emit('dragLeave')"
+    @dragenter="emit('dragEnter', periodKey)"
+    @dragleave="emit('dragLeaveSection')"
     @drop.prevent="emit('drop', periodKey)"
   >
     <!-- 时段标题 -->
@@ -60,7 +61,8 @@ const emit = defineEmits<{
   (e: 'dragStart', id: string, event: DragEvent): void
   (e: 'dragEnd'): void
   (e: 'dragOver', section: PeriodKey): void
-  (e: 'dragLeave'): void
+  (e: 'dragEnter', section: PeriodKey): void
+  (e: 'dragLeaveSection'): void
   (e: 'drop', section: PeriodKey): void
 }>()
 </script>

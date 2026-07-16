@@ -1,0 +1,36 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1024 1024" width="1024" height="1024">
+  <defs>
+    <!-- 柔和阴影 -->
+    <filter id="soft-shadow" x="-10%" y="-10%" width="120%" height="130%">
+      <feDropShadow dx="0" dy="12" stdDeviation="18" flood-color="#7A7571" flood-opacity="0.12"/>
+    </filter>
+  </defs>
+
+  <!-- 外层背景 squircle（莫兰迪暖灰） -->
+  <rect x="51" y="51" width="922" height="922" rx="215" fill="#E8E5DF"/>
+
+  <!-- 内层日历卡片（米白） -->
+  <rect x="179" y="230" width="666" height="614" rx="82" fill="#FBF9F6" filter="url(#soft-shadow)"/>
+
+  <!-- 日历顶栏（弧形，莫兰迪灰绿） -->
+  <path d="M 179 312 Q 179 230 261 230 L 763 230 Q 845 230 845 312 L 845 435 L 179 435 Z" fill="#9BA49D"/>
+
+  <!-- 左侧日历环扣（金属环效果） -->
+  <!-- 外环 -->
+  <rect x="307" y="164" width="61" height="133" rx="30" fill="#D2CDC4"/>
+  <!-- 内环 -->
+  <rect x="323" y="179" width="31" height="102" rx="15" fill="#BDB8AF"/>
+
+  <!-- 右侧日历环扣 -->
+  <rect x="655" y="164" width="61" height="133" rx="30" fill="#D2CDC4"/>
+  <rect x="671" y="179" width="31" height="102" rx="15" fill="#BDB8AF"/>
+
+  <!-- 顶栏文字 "MORANDI"（白色） -->
+  <text x="512" y="364" font-family="'Segoe UI', 'Helvetica Neue', system-ui, sans-serif" font-size="60" font-weight="700" fill="#FFFFFF" text-anchor="middle" letter-spacing="7.5">MORANDI</text>
+
+  <!-- 大日期 "32"（深褐） -->
+  <text x="512" y="696" font-family="'Segoe UI', 'Helvetica Neue', system-ui, sans-serif" font-size="266" font-weight="800" fill="#5C5855" text-anchor="middle">32</text>
+
+  <!-- 底部文字 "SCHEDULE"（灰） -->
+  <text x="512" y="783" font-family="'Segoe UI', 'Helvetica Neue', system-ui, sans-serif" font-size="51" font-weight="600" fill="#A39D98" text-anchor="middle" letter-spacing="10">SCHEDULE</text>
+</svg>

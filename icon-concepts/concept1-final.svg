@@ -1,0 +1,42 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1024 1024">
+  <defs>
+    <!-- 莫兰迪绿背景 -->
+    <linearGradient id="bg" x1="0" y1="0" x2="0.3" y2="1">
+      <stop offset="0%" stop-color="#A8BBA5"/>
+      <stop offset="100%" stop-color="#9AAD97"/>
+    </linearGradient>
+    <!-- 内面浅色 -->
+    <linearGradient id="card" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0%" stop-color="#FCFAF7"/>
+      <stop offset="100%" stop-color="#F2EDE7"/>
+    </linearGradient>
+    <!-- 顶栏暖灰 -->
+    <linearGradient id="header" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0%" stop-color="#CDC6B8"/>
+      <stop offset="100%" stop-color="#BFB8AA"/>
+    </linearGradient>
+  </defs>
+
+  <!-- 外底 squircle（Apple 风格的圆角） -->
+  <rect width="1024" height="1024" rx="224" fill="url(#bg)"/>
+
+  <!-- 内面卡片 -->
+  <rect x="166" y="166" width="692" height="692" rx="136" fill="url(#card)"/>
+
+  <!-- 日历顶栏 -->
+  <rect x="232" y="232" width="560" height="128" rx="32" fill="url(#header)"/>
+
+  <!-- 顶栏装饰：半透明圆点（类似纸夹孔） -->
+  <circle cx="512" cy="296" r="10" fill="#A3B5A0" opacity="0.25"/>
+
+  <!-- 日期数字 "32" -->
+  <text x="512" y="610" font-family="'Helvetica Neue', 'SF Pro Display', -apple-system, system-ui, sans-serif" font-size="200" font-weight="700" fill="#3D3835" text-anchor="middle" letter-spacing="2">32</text>
+
+  <!-- 日历横线 - 3 条 -->
+  <rect x="282" y="670" width="460" height="5" rx="2.5" fill="#E0D9D0"/>
+  <rect x="282" y="712" width="460" height="5" rx="2.5" fill="#E0D9D0"/>
+  <rect x="282" y="754" width="300" height="5" rx="2.5" fill="#E0D9D0"/>
+
+  <!-- 极细边框描边（增加精致感） -->
+  <rect x="166" y="166" width="692" height="692" rx="136" fill="none" stroke="#E0D9D0" stroke-width="2" opacity="0.5"/>
+</svg>

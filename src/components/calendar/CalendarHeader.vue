@@ -184,12 +184,12 @@ function onDateChange(val: string) {
 /* ── 窄屏适配 ────────────────────── */
 @media (max-width: 767px) {
   .calendar-header { flex-wrap: nowrap; gap: 4px; }
-  .header-title { font-size: var(--font-size-md); min-width: 80px; }
+  .header-title { font-size: var(--font-size-md); min-width: 72px; }
   .header-left { gap: 2px; }
   .today-btn { padding: var(--spacing-xs) var(--spacing-sm); font-size: 11px; }
   .today-label { display: none; }
   .today-short { display: inline; }
-  .view-btn { padding: var(--spacing-xs); font-size: 11px; }
+  .view-btn { padding: var(--spacing-xs) var(--spacing-sm); font-size: 11px; }
   .view-btn-label { display: none; }
   .view-btn-icon { display: inline-flex; }
 }

@@ -2290,9 +2290,20 @@ dependencies = [
 ]
 
 [[package]]
-name = "morandi-schedule"
-version = "0.4.0"
+name = "morandi-plugin"
+version = "0.1.0"
 dependencies = [
+ "serde",
+ "serde_json",
+ "tauri",
+ "tauri-plugin",
+]
+
+[[package]]
+name = "morandi-schedule"
+version = "0.4.2"
+dependencies = [
+ "morandi-plugin",
  "serde",
  "serde_json",
  "tauri",
@@ -2304,6 +2315,7 @@ dependencies = [
  "tauri-plugin-notification",
  "tauri-plugin-shell",
  "tauri-plugin-window-state",
+ "windows-sys 0.59.0",
 ]
 
 [[package]]
@@ -3997,6 +4009,7 @@ dependencies = [
  "gtk",
  "heck 0.5.0",
  "http",
+ "image",
  "jni",
  "libc",
  "log",

@@ -48,7 +48,8 @@
       @drag-start="onDragStart"
       @drag-end="onDragEnd"
       @drag-over="onDragOver"
-      @drag-leave="onDragLeave"
+      @drag-enter="onDragEnter"
+      @drag-leave-section="onDragLeaveSection"
       @drop="onDrop"
     >
       <template #task-meta="{ task }">
@@ -74,7 +75,8 @@
       @drag-start="onDragStart"
       @drag-end="onDragEnd"
       @drag-over="onDragOver"
-      @drag-leave="onDragLeave"
+      @drag-enter="onDragEnter"
+      @drag-leave-section="onDragLeaveSection"
       @drop="onDrop"
     />
 
@@ -94,7 +96,8 @@
       @drag-start="onDragStart"
       @drag-end="onDragEnd"
       @drag-over="onDragOver"
-      @drag-leave="onDragLeave"
+      @drag-enter="onDragEnter"
+      @drag-leave-section="onDragLeaveSection"
       @drop="onDrop"
     />
 
@@ -114,7 +117,8 @@
       @drag-start="onDragStart"
       @drag-end="onDragEnd"
       @drag-over="onDragOver"
-      @drag-leave="onDragLeave"
+      @drag-enter="onDragEnter"
+      @drag-leave-section="onDragLeaveSection"
       @drop="onDrop"
     />
   </div>
@@ -150,6 +154,8 @@ const emit = defineEmits<{
 // ─── 拖拽状态 ─────────────────────────────────────
 const dragTaskId = ref<string | null>(null)
 const dragOverSection = ref<PeriodKey | null>(null)
+// 拖拽 enter/leave 计数器，防止鼠标划过子元素导致高亮闪烁
+const dragEnterCount = ref(0)
 
 function onDragStart(taskId: string, event: DragEvent) {
   dragTaskId.value = taskId
@@ -164,14 +170,20 @@ function onDragStart(taskId: string, event: DragEvent) {
 function onDragEnd() {
   dragTaskId.value = null
   dragOverSection.value = null
+  dragEnterCount.value = 0
 }
 
-function onDragOver(section: PeriodKey | null) {
-  if (section) dragOverSection.value = section
+function onDragEnter(section: PeriodKey) {
+  dragEnterCount.value++
+  dragOverSection.value = section
 }
 
-function onDragLeave() {
-  dragOverSection.value = null
+function onDragLeaveSection() {
+  dragEnterCount.value--
+  if (dragEnterCount.value <= 0) {
+    dragEnterCount.value = 0
+    dragOverSection.value = null
+  }
 }
 
 function onDrop(targetPeriod: PeriodKey) {
@@ -184,6 +196,7 @@ function onDrop(targetPeriod: PeriodKey) {
   }
   dragTaskId.value = null
   dragOverSection.value = null
+  dragEnterCount.value = 0
 }
 
 // ─── 日期 ────────────────────────────────────────────

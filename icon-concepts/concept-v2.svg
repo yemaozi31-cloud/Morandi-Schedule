@@ -1,0 +1,67 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1024 1024">
+  <defs>
+    <!-- 外背景渐变（暖灰米白） -->
+    <linearGradient id="outerBg" x1="0" y1="0" x2="0.3" y2="1">
+      <stop offset="0%" stop-color="#F5F2EA"/>
+      <stop offset="100%" stop-color="#EDE8DD"/>
+    </linearGradient>
+
+    <!-- 日历主体底色（莫兰迪暖米白） -->
+    <linearGradient id="cardBody" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0%" stop-color="#F2ECDF"/>
+      <stop offset="100%" stop-color="#E5DCCB"/>
+    </linearGradient>
+
+    <!-- 日历顶栏（莫兰迪灰绿） -->
+    <linearGradient id="headerGreen" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0%" stop-color="#B2BEAE"/>
+      <stop offset="60%" stop-color="#A6B4A2"/>
+      <stop offset="100%" stop-color="#9CAB97"/>
+    </linearGradient>
+
+    <!-- 顶部文字颜色（灰绿色调） -->
+    <linearGradient id="headerText" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0%" stop-color="#FCFAF7"/>
+      <stop offset="100%" stop-color="#F0EDE5"/>
+    </linearGradient>
+
+    <!-- 柔和阴影 -->
+    <filter id="cardShadow" x="-8%" y="-5%" width="116%" height="125%">
+      <feDropShadow dx="0" dy="10" stdDeviation="18" flood-color="#8B7D70" flood-opacity="0.12"/>
+    </filter>
+  </defs>
+
+  <!-- === 外层背景 (squircle) === -->
+  <rect width="1024" height="1024" rx="224" fill="url(#outerBg)"/>
+
+  <!-- === 日历卡片主体 === -->
+  <g filter="url(#cardShadow)">
+    <!-- 卡片底部（暖米色） -->
+    <rect x="172" y="280" width="680" height="520" rx="56" fill="url(#cardBody)"/>
+
+    <!-- 卡片顶栏（莫兰迪灰绿） -->
+    <rect x="172" y="280" width="680" height="160" rx="56" fill="url(#headerGreen)"/>
+    <!-- 覆盖底部直角 -->
+    <rect x="172" y="360" width="680" height="80" fill="url(#headerGreen)"/>
+  </g>
+
+  <!-- === 顶栏装饰：两行极淡字母 === -->
+  <!-- 第一行：更淡的小字 -->
+  <text x="512" y="348" font-family="'SF Pro Display', 'Helvetica Neue', system-ui, sans-serif" font-size="18" font-weight="400" fill="url(#headerText)" text-anchor="middle" letter-spacing="8" opacity="0.55">JULY</text>
+
+  <!-- 第二行：稍大的日期数字在顶栏中 -->
+  <text x="512" y="408" font-family="'SF Pro Display', 'Helvetica Neue', system-ui, sans-serif" font-size="48" font-weight="300" fill="url(#headerText)" text-anchor="middle" letter-spacing="4" opacity="0.85">15</text>
+
+  <!-- === 主体区域 === -->
+  <!-- 大日期 "32" -->
+  <text x="512" y="620" font-family="'SF Pro Display', 'Helvetica Neue', system-ui, sans-serif" font-size="240" font-weight="300" fill="#5D5350" text-anchor="middle" letter-spacing="6">
+    32
+  </text>
+
+  <!-- === 底部横线（极淡）=== -->
+  <line x1="270" y1="700" x2="754" y2="700" stroke="#D5CCBB" stroke-width="2.5" stroke-linecap="round"/>
+  <line x1="270" y1="730" x2="754" y2="730" stroke="#D5CCBB" stroke-width="2.5" stroke-linecap="round"/>
+
+  <!-- === 卡片底端极淡描边 === -->
+  <rect x="172" y="280" width="680" height="520" rx="56" fill="none" stroke="#D5CCBB" stroke-width="1.5" opacity="0.4"/>
+</svg>
