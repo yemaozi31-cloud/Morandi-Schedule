@@ -94,6 +94,7 @@ function handleEdit() {
 }
 
 function handleDelete() {
+  console.log('[TaskDetailModal] handleDelete 被调用, taskId:', task.value?.id)
   if (!task.value) return
   const id = task.value.id  // 先存到局部变量，防止闭包内 task 变化导致 TypeError
   window.__dialog?.warning({

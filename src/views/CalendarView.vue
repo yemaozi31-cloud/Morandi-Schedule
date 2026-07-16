@@ -371,6 +371,7 @@ async function handleToggle(taskId: string) {
 }
 
 async function handleDelete(taskId: string) {
+  console.log('[CalendarView] handleDelete 被调用:', taskId)
   if (window.__dialog) {
     window.__dialog.warning({
       title: '删除任务',

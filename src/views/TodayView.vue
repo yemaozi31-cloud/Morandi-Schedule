@@ -229,6 +229,7 @@ async function handleToggle(taskId: string) {
 }
 
 function handleDelete(taskId: string) {
+  console.log('[TodayView] handleDelete 被调用:', taskId)
   const task = taskStore.getTaskById(taskId)
   if (!task) return
   showConfirm('删除任务', `确认删除任务"${task.title}"？此操作不可撤销。`, async () => {

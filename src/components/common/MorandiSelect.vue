@@ -155,6 +155,7 @@ onUnmounted(() => document.removeEventListener('click', onClickOutside))
   position: fixed; inset: 0; z-index: 9000;
   background: var(--color-overlay);
   display: flex; align-items: flex-end; justify-content: center;
+  pointer-events: auto;
 }
 .select-sheet {
   width: 100%; max-width: 500px;
@@ -188,8 +189,10 @@ onUnmounted(() => document.removeEventListener('click', onClickOutside))
 .option-label { flex: 1; }
 
 /* 过渡 */
-.select-fade-enter-active, .select-fade-leave-active { transition: opacity 0.15s ease; }
+.select-fade-enter-active { transition: opacity 0.15s ease; }
+.select-fade-leave-active { transition: opacity 0.15s ease; pointer-events: none; }
 .select-fade-enter-from, .select-fade-leave-to { opacity: 0; }
-.select-slide-up-enter-active, .select-slide-up-leave-active { transition: transform 0.25s ease; }
+.select-slide-up-enter-active { transition: transform 0.25s ease; }
+.select-slide-up-leave-active { transition: transform 0.25s ease; pointer-events: none; }
 .select-slide-up-enter-from, .select-slide-up-leave-to { transform: translateY(100%); }
 </style>

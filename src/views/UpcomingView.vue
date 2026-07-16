@@ -91,6 +91,7 @@ async function handleToggle(taskId: string) {
 }
 
 async function handleDelete(taskId: string) {
+  console.log('[UpcomingView] handleDelete 被调用:', taskId)
   const task = taskStore.getTaskById(taskId)
   if (!task) return
   showConfirm('删除任务', `确认删除任务"${task.title}"？`, async () => {
