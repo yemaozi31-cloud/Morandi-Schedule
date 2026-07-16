@@ -204,14 +204,19 @@ const progressPercent = computed(() =>
 async function handleCheckIn() {
   try {
     if (props.habit.isShared) {
-      // 共享习惯：走云端
+      // 共享习惯：同步云端 + 本地
       if (sharedTodayChecked.value) {
         await cancelCheckIn(cfg.value, props.habit.sharedHabitName!, cfg.value.nickname!)
         sharedTodayChecked.value = false
+        // 同步删除本地打卡记录
+        const localCheckIn = habitStore.getCheckInsForHabit(props.habit.id).find(c => c.date === getTodayStr())
+        if (localCheckIn) await habitStore.deleteCheckIn(localCheckIn.id, getTodayStr())
         window.__message?.info('已取消打卡')
       } else {
         await checkInSharedHabit(cfg.value, props.habit.sharedHabitName!, cfg.value.nickname!)
         sharedTodayChecked.value = true
+        // 同步添加本地打卡记录（让 pendingHabitCount 更新）
+        await habitStore.checkIn(props.habit.id, 1)
         window.__message?.success('打卡成功')
       }
       refreshSharedStatus()

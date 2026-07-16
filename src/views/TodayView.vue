@@ -18,6 +18,7 @@
         <div class="today-content">
           <DayTimeline
             :tasks="taskStore.todayTasks"
+            :overdue-tasks="overdueTasks"
             :current-date="todayStr"
             :show-nav="false"
             :show-overdue="true"
@@ -155,6 +156,12 @@ const pendingHabitCount = computed(() => {
     return val < h.target
   }).length
 })
+
+const overdueTasks = computed(() =>
+  taskStore.activeTasks.filter(t =>
+    t.dueDate && t.dueDate < todayStr && !t.deletedAt && t.status !== 'completed' && t.status !== 'cancelled'
+  )
+)
 
 onMounted(async () => {
   await taskStore.loadTasks()

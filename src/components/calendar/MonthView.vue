@@ -29,7 +29,8 @@
                 'is-spanning': true,
                 'span-start': day.isSpanStart(task) && !day.isSpanSingle(task),
                 'span-end': day.isSpanEnd(task) && !day.isSpanSingle(task),
-                'span-single': day.isSpanSingle(task)
+                'span-single': day.isSpanSingle(task),
+                completed: task.status === 'completed'
               }
             ]"
             :title="task.title"
@@ -84,7 +85,7 @@
               v-for="t in day.allDayTasks"
               :key="t.id"
               class="mc-allday-strip"
-              :class="'p-' + t.priority"
+              :class="['p-' + t.priority, { completed: t.status === 'completed' }]"
               @click.stop="handleTaskClick(t.id)"
             ><span class="mc-allday-title">{{ t.title }}</span></div>
           </div>
@@ -93,7 +94,7 @@
               v-for="t in day.spanningTasks"
               :key="t.id"
               class="mc-span-bar"
-              :class="['p-' + t.priority, { 'span-start': t.startDate === day.date && t.dueDate !== day.date, 'span-end': t.dueDate === day.date && t.startDate !== day.date, 'span-single': t.startDate === day.date && t.dueDate === day.date }]"
+              :class="['p-' + t.priority, { 'span-start': t.startDate === day.date && t.dueDate !== day.date, 'span-end': t.dueDate === day.date && t.startDate !== day.date, 'span-single': t.startDate === day.date && t.dueDate === day.date, completed: t.status === 'completed' }]"
               @click.stop="handleTaskClick(t.id)"
             ><span v-if="isMidDate(t, day.date)">{{ t.title }}</span></div>
           </div>
@@ -387,7 +388,7 @@ onMounted(() => {
 .weekday-cell {
   text-align: center;
   font-size: var(--font-size-sm);
-  color: var(--color-text-muted);
+  color: var(--color-text-secondary);
   padding: var(--spacing-xs) 0;
 }
 
@@ -415,7 +416,7 @@ onMounted(() => {
 
 .month-cell:hover { background: var(--color-surface-hover); }
 .month-cell.other-month { background: var(--color-bg); }
-.month-cell.other-month .day-number { color: var(--color-text-muted); }
+.month-cell.other-month .day-number { color: var(--color-text-secondary); }
 .month-cell.today .day-number {
   background: var(--color-primary);
   color: var(--color-text-on-primary);
@@ -533,7 +534,7 @@ onMounted(() => {
 
 .task-bar-more {
   font-size: 9px;
-  color: var(--color-text-muted);
+  color: var(--color-text-secondary);
   padding: 0 2px;
   line-height: 1.6;
   flex-shrink: 0;
@@ -574,7 +575,7 @@ onMounted(() => {
 
   .task-bar-more {
     font-size: 9px;
-    color: var(--color-text-muted);
+    color: var(--color-text-secondary);
   }
 }
 
@@ -717,7 +718,7 @@ onMounted(() => {
     background: inherit;
   }
   .mc-dname { font-weight: 600; color: var(--color-text); font-size: 11px; }
-  .mc-dnum { font-size: 12px; color: var(--color-text-muted); }
+  .mc-dnum { font-size: 12px; color: var(--color-text-secondary); }
   .mc-dnum-today {
     background: var(--color-primary);
     color: var(--color-text-on-primary);
@@ -863,9 +864,11 @@ onMounted(() => {
 }
 
 /* 月视图已完成任务 */
-.task-bar.completed { opacity: 0.5; text-decoration: line-through; color: var(--color-text-muted); }
-.mc-strip.completed { opacity: 0.5; }
-.mc-strip.completed .mc-strip-title { text-decoration: line-through; color: var(--color-text-muted); }
+.task-bar.completed { text-decoration: line-through; color: var(--color-text-secondary); }
+.mc-strip.completed { text-decoration: line-through; color: var(--color-text-secondary); }
+.mc-strip.completed .mc-strip-title { text-decoration: line-through; color: var(--color-text-secondary); }
+.mc-allday-strip.completed .mc-allday-title { text-decoration: line-through; color: var(--color-text-secondary); }
+.mc-span-bar.completed { text-decoration: line-through; color: var(--color-text-secondary); }
 </style>
 /* 鈹€鈹€ 鎵嬫満绔湀瑙嗗浘鍗＄墖 鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€ */
 .mc-card { display: none; }
@@ -947,7 +950,7 @@ onMounted(() => {
     background: inherit;
   }
   .mc-dname { font-weight: 600; color: var(--color-text); font-size: 11px; }
-  .mc-dnum { font-size: 12px; color: var(--color-text-muted); }
+  .mc-dnum { font-size: 12px; color: var(--color-text-secondary); }
   .mc-dnum-today {
     background: var(--color-primary);
     color: var(--color-text-on-primary);

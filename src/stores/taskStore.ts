@@ -30,7 +30,7 @@ export const useTaskStore = defineStore('tasks', () => {
     Array.from(tasks.value.values()).filter(t => !t.deletedAt)
   )
 
-  // 今日任务
+  // 今日任务（不包括过期任务，过期任务由 DayTimeline 的过期区块单独显示）
   const todayTasks = computed(() => {
     const today = getTodayStr()
     return activeTasks.value.filter(t => {
@@ -38,7 +38,7 @@ export const useTaskStore = defineStore('tasks', () => {
       if (t.isSpanning && t.startDate) {
         return today >= t.startDate && today <= t.dueDate
       }
-      return t.dueDate === today || (t.dueDate && t.dueDate < today)
+      return t.dueDate === today
     })
   })
 

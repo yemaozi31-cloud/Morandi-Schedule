@@ -140,6 +140,7 @@ const props = defineProps<{
   currentDate: string
   showNav?: boolean
   showOverdue?: boolean
+  overdueTasks?: Task[]
 }>()
 
 const emit = defineEmits<{
@@ -211,7 +212,7 @@ const dateTitle = computed(() => {
 
 // ─── 任务分组 ────────────────────────────────────────
 const overdueTasks = computed(() =>
-  props.tasks.filter(t =>
+  props.overdueTasks || props.tasks.filter(t =>
     t.dueDate && t.dueDate < today && t.dueDate !== props.currentDate &&
     !t.deletedAt && t.status !== 'completed'
   )
