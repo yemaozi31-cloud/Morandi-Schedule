@@ -19,6 +19,17 @@
           <div v-else class="app-loading">
             <div class="loading-spinner"></div>
           </div>
+          <ConfirmDialog
+            v-if="confirmState.show"
+            :show="confirmState.show"
+            :title="confirmState.title"
+            :content="confirmState.content"
+            positive-text="确认"
+            negative-text="取消"
+            @confirm="handleGlobalConfirm(true)"
+            @cancel="handleGlobalConfirm(false)"
+            @update:show="(v) => { if (!v) handleGlobalConfirm(false) }"
+          />
         </n-dialog-provider>
       </n-notification-provider>
     </n-message-provider>
@@ -36,6 +47,8 @@ import { useHabitStore } from '@/stores/habitStore'
 import { usePomodoroStore } from '@/stores/pomodoroStore'
 import { useUiStore } from '@/stores/uiStore'
 import NaiveBridge from '@/components/common/NaiveBridge.vue'
+import ConfirmDialog from '@/components/common/ConfirmDialog.vue'
+import { confirmState } from '@/utils/globalConfirm'
 import { startBackgroundPolling, stopBackgroundPolling } from '@/services/autoSync'
 import { startOfflineMonitor, stopOfflineMonitor } from '@/services/offlineQueue'
 import { initKeyboardService, registerShortcut, destroyKeyboardService } from '@/services/keyboardService'
@@ -64,6 +77,12 @@ window.addEventListener('unhandledrejection', (event) => {
   console.error('[未捕获Promise异常]', event.reason)
   window.__message?.error('操作异常，请重试')
 })
+
+function handleGlobalConfirm(value: boolean) {
+  confirmState.resolve?.(value)
+  confirmState.show = false
+  confirmState.resolve = null
+}
 
 onMounted(async () => {
   // 检查是否已登录（有记住的昵称），未登录则跳转登录页

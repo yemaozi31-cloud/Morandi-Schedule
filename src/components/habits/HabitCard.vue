@@ -74,8 +74,9 @@ import type { Habit } from '@/types'
 import { useHabitStore } from '@/stores/habitStore'
 import { useSettingsStore } from '@/stores/settingsStore'
 import Icon from '@/components/common/Icon.vue'
-import { checkInSharedHabit, cancelCheckIn, fetchSharedCheckIns } from '@/services/webdavSync'
+import { checkInSharedHabit, cancelCheckIn } from '@/services/webdavSync'
 import { getTodayStr } from '@/utils/date'
+import { showConfirm } from '@/utils/globalConfirm'
 
 
 const props = defineProps<{
@@ -101,21 +102,13 @@ const cfg = computed(() => settingsStore.syncConfig)
 const allSharedCheckIns = ref<{ nick: string; date: string }[]>([])
 
 
-/** 拉取云端共享打卡数据 */
+/** 从本地 habitStore 读取共享打卡状态（不再从云端拉取） */
 async function refreshSharedStatus() {
   if (!props.habit.isShared || !cfg.value.nickname || !props.habit.sharedHabitName) return
-  // 已有数据时先保留旧值，避免闪烁
-  try {
-    const data = await fetchSharedCheckIns(cfg.value)
-    const filtered = data.filter(c => c.habitName === props.habit.sharedHabitName)
-    allSharedCheckIns.value = filtered
-    const today = getTodayStr()
-    // 如果云端有记录就用云端的，否则保留当前状态（避免刷新覆盖刚打上的卡）
-    const cloudChecked = filtered.some(c => c.nick === cfg.value.nickname && c.date === today)
-    if (cloudChecked) sharedTodayChecked.value = true
-  } catch (e) {
-    console.warn('[HabitCard] 拉取共享打卡失败:', e)
-  }
+  const today = getTodayStr()
+  const localCheckIns = habitStore.getCheckInsForHabit(props.habit.id)
+  allSharedCheckIns.value = localCheckIns.map(c => ({ nick: cfg.value.nickname!, date: c.date }))
+  sharedTodayChecked.value = localCheckIns.some(c => c.date === today)
 }
 
 // ── 热力图月份状态 ──────────────────────────────
@@ -149,16 +142,6 @@ const monthDays = computed(() => {
 
 // 共享习惯挂载时拉取云端数据
 if (props.habit.isShared) refreshSharedStatus()
-
-function showConfirm(title: string, message: string, onConfirm: () => void) {
-  window.__dialog?.warning({
-    title,
-    content: message,
-    positiveText: '确认',
-    negativeText: '取消',
-    onPositiveClick: onConfirm
-  })
-}
 
 const periodLabel = computed(() => habitStore.getPeriodLabel(props.habit.frequency))
 const periodValue = computed(() =>
@@ -205,23 +188,17 @@ const progressPercent = computed(() =>
 async function handleCheckIn() {
   try {
     if (props.habit.isShared) {
-      // 共享习惯：同步云端 + 本地
       if (sharedTodayChecked.value) {
-        const ok = await cancelCheckIn(cfg.value, props.habit.sharedHabitName!, cfg.value.nickname!)
-        if (!ok) { window.__message?.error('取消打卡失败'); return }
+        await cancelCheckIn(cfg.value, props.habit.sharedHabitName!, cfg.value.nickname!)
+        await habitStore.deleteCheckIn(props.habit.id, getTodayStr())
         sharedTodayChecked.value = false
-        const localCheckIn = habitStore.getCheckInsForHabit(props.habit.id).find(c => c.date === getTodayStr())
-        if (localCheckIn) await habitStore.deleteCheckIn(localCheckIn.id, getTodayStr())
         window.__message?.info('已取消打卡')
       } else {
-        const ok = await checkInSharedHabit(cfg.value, props.habit.sharedHabitName!, cfg.value.nickname!)
-        if (!ok) { window.__message?.error('打卡失败，请检查网络'); return }
-        sharedTodayChecked.value = true
+        await checkInSharedHabit(cfg.value, props.habit.sharedHabitName!, cfg.value.nickname!)
         await habitStore.checkIn(props.habit.id, 1)
+        sharedTodayChecked.value = true
         window.__message?.success('打卡成功')
       }
-      // 不执行 refreshSharedStatus，避免刷新覆盖刚设置的状态
-      setTimeout(() => refreshSharedStatus(), 2000)
       emit('checked', props.habit.id)
       return
     }
@@ -241,15 +218,20 @@ async function handleCheckIn() {
   }
 }
 
-function handleDelete() {
-  showConfirm('删除习惯', `确认删除习惯"${props.habit.name}"？打卡记录也将被清除。`, async () => {
-    try {
-      await habitStore.deleteHabit(props.habit.id)
-      window.__message?.success('习惯已删除')
-    } catch {
-      window.__message?.error('删除失败')
+async function handleDelete() {
+  const ok = await showConfirm({ title: '删除习惯', content: `确认删除习惯"${props.habit.name}"？打卡记录也将被清除。` })
+  if (!ok) return
+  try {
+    // 共享习惯：同步退出到云端，再删本地
+    if (props.habit.isShared && props.habit.sharedHabitName) {
+      const { leaveSharedHabit } = await import('@/services/webdavSync')
+      await leaveSharedHabit(cfg.value, props.habit.sharedHabitName, cfg.value.nickname!)
     }
-  })
+    await habitStore.deleteHabit(props.habit.id)
+    window.__message?.success('习惯已删除')
+  } catch {
+    window.__message?.error('删除失败')
+  }
 }
 </script>
 

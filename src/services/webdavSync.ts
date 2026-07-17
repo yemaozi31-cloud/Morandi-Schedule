@@ -317,16 +317,20 @@ export async function pullFromWebDAV(config: SyncConfig): Promise<SyncResult> {
 }
 
 /**
- * 双向同步 = Push（上传本地）→ Pull（下载并合并云端）
- * 确保无论从哪台设备发起都能获取到全部最新数据
+ * 双向同步 = Push（上传本地全量）→ Pull（下载云端合并）
+ * 先 Push 再 Pull，这样本地删除的数据不会被云端旧数据恢复。
+ *
+ * 多设备场景：
+ *   - 本设备删除 → push 上传（云端同步删除）→ pull（云端已无此数据）→ ✅ 不恢复
+ *   - 他设备新增 → push 上传（本地数据不变）→ pull 下载他设备新增 → ✅ 合并到本地
  */
 export async function sync(config: SyncConfig): Promise<SyncResult> {
-  // 1. 先从云端拉取其他设备的变更合并到本地
-  const pull = await pullFromWebDAV(config)
-
-  // 2. 再上传合并后的完整数据到云端
+  // 1. 先上传本地全量数据到云端
   const push = await pushToWebDAV(config)
   if (!push.ok) return push
+
+  // 2. 再从云端拉取其他设备的变更合并到本地
+  const pull = await pullFromWebDAV(config)
 
   if (!pull.ok) {
     // 拉取失败但推送成功的场景（如云端本来就没数据）
@@ -338,7 +342,7 @@ export async function sync(config: SyncConfig): Promise<SyncResult> {
 
   return {
     ok: true,
-    message: `同步完成\n${pull.message}\n${push.message}`
+    message: `同步完成\n${push.message}\n${pull.message}`
   }
 }
 
@@ -431,9 +435,9 @@ export async function fetchSharedData(config: SyncConfig): Promise<SharedData> {
     console.log('[webdavSync] fetchSharedData 成功, checkIns:', data.checkIns?.length)
     const merged = new Set([...(data.knownUsers || []), ...discovered])
     data.knownUsers = Array.from(merged).filter(u => u && u !== 'default' && u !== 'shared')
-    await saveSharedData(config, data)
+    // 去掉自动 saveSharedData — 避免读一次就写一次
     return data
-  } catch (e) { console.error('[webdavSync] fetchSharedData 失败:', e);
+  } catch { /* 静默失败，下次重试 */
     const discovered = await discoverUsersFromWebDAV(config)
     return { version: 1, habits: [], checkIns: [], knownUsers: discovered }
   }

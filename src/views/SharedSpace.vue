@@ -134,14 +134,14 @@
 </template>
 
 <script setup lang="ts">
-import { ref, computed, reactive, onMounted, onUnmounted } from 'vue'
+import { ref, computed, reactive, onMounted } from 'vue'
 import { getTodayStr } from '@/utils/date'
 import { useSettingsStore } from '@/stores/settingsStore'
 import { generateUUID } from '@/utils/uuid'
 import * as db from '@/db'
 import { useHabitStore } from '@/stores/habitStore'
 import {
-  fetchSharedData, createSharedHabit, acceptSharedHabitInvite,
+  createSharedHabit, acceptSharedHabitInvite,
   ignoreSharedHabitInvite, leaveSharedHabit, checkInSharedHabit, cancelCheckIn,
   discoverUsersFromWebDAV,
   type SharedHabitData, type SharedCheckIn
@@ -232,9 +232,15 @@ function getMemberHeatmap(habitName: string, nick: string): { status: string; da
   const daysInMonth = new Date(h.year, h.month + 1, 0).getDate()
   const monthStr = `${h.year}-${String(h.month + 1).padStart(2, '0')}`
   const result: { status: string; date: string }[] = []
+  const localId = nick === myNick.value ? getLocalHabitId(habitName) : null
   for (let d = 1; d <= daysInMonth; d++) {
     const dateStr = `${monthStr}-${String(d).padStart(2, '0')}`
-    const checked = sharedData.value.checkIns.some(c => c.habitName === habitName && c.nick === nick && c.date === dateStr)
+    let checked: boolean
+    if (localId) {
+      checked = habitStore.getCheckInsForHabit(localId).some(c => c.date === dateStr)
+    } else {
+      checked = sharedData.value.checkIns.some(c => c.habitName === habitName && c.nick === nick && c.date === dateStr)
+    }
     if (!checked) {
       result.push({ status: 'empty', date: '' })
     } else {
@@ -303,10 +309,23 @@ function myCheckInStatus(habitName: string): CheckInStatus {
 
 async function loadSharedData() {
   if (!isConfigured.value) return
-  const data = await fetchSharedData(config.value)
-  sharedData.value = data
-  // 实时扫描 WebDAV 目录发现活跃用户
-  await refreshLiveUsers()
+  try {
+    // 从云端拉取共享数据到本地
+    const { fetchSharedData } = await import('@/services/webdavSync')
+    const data = await fetchSharedData(config.value)
+    // 将云端打卡数据写入本地 habitStore
+    for (const ci of data.checkIns) {
+      const localId = getLocalHabitId(ci.habitName)
+      if (!localId) continue
+      const localCheckIns = habitStore.getCheckInsForHabit(localId)
+      if (!localCheckIns.some(c => c.date === ci.date)) {
+        // 本地没有这条记录，写入本地
+        await habitStore.checkIn(localId, 1)
+      }
+    }
+    sharedData.value = data
+    await refreshLiveUsers()
+  } catch { /* 静默失败 */ }
 }
 
 async function handleCreate() {
@@ -356,15 +375,22 @@ async function handleIgnore(invite: SharedHabitData) {
 async function handleLeave(habit: SharedHabitData) {
   const ok = await leaveSharedHabit(config.value, habit.name, myNick.value)
   if (ok) {
-    // 删除本地对应的共享习惯
-    for (const [id, h] of habitStore.habits) {
+    // 删除所有同名共享习惯的本地副本（用 Array.from 保证 Pinia ref Map 遍历可靠）
+    const allHabits = Array.from(habitStore.habits.values())
+    let count = 0
+    for (const h of allHabits) {
       if (h.sharedHabitName === habit.name) {
-        await habitStore.deleteHabit(id)
-        break
+        await habitStore.deleteHabit(h.id)
+        count++
       }
     }
-    window.__message?.info(`已退出「${habit.name}」`)
+    console.log('[handleLeave] 删除了', count, '条本地习惯记录')
+    // 重新从云端拉取 + 从 IndexedDB 重新加载 habitStore
     await loadSharedData()
+    await habitStore.loadHabits()
+    await habitStore.loadCheckIns()
+    console.log('[handleLeave] 重新加载后 habits 数量:', habitStore.habits.size)
+    window.__message?.info(`已退出「${habit.name}」，清理 ${count} 条本地记录`)
   } else {
     window.__message?.error('操作失败')
   }
@@ -372,7 +398,8 @@ async function handleLeave(habit: SharedHabitData) {
 
 /** 获取本地共享习惯 ID */
 function getLocalHabitId(sharedName: string): string | null {
-  for (const [id, h] of habitStore.habits) {
+  const all = Array.from(habitStore.habits.entries())
+  for (const [id, h] of all) {
     if (h.sharedHabitName === sharedName) return id
   }
   return null
@@ -389,7 +416,8 @@ async function handleSharedCheckIn(habitName: string) {
     const ok = await cancelCheckIn(config.value, habitName, myNick.value)
     if (ok) {
       if (localId) {
-        for (const [id, c] of habitStore.checkIns) {
+        const allCheckIns = Array.from(habitStore.checkIns.entries())
+        for (const [id, c] of allCheckIns) {
           if (c.habitId === localId && c.date === today) {
             await db.remove('habitCheckIns', id)
             habitStore.checkIns.delete(id)
@@ -430,7 +458,8 @@ async function handleSharedCheckIn(habitName: string) {
 
 onMounted(() => {
   loadSharedData()
-  setInterval(loadSharedData, 15000)
+  // 60 秒刷新一次（避免开发环境下 Vite 代理过于频繁）
+  setInterval(loadSharedData, 60000)
 })
 </script>
 

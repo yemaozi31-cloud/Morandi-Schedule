@@ -110,6 +110,7 @@ import { ref, onMounted } from 'vue'
 import { useRouter } from 'vue-router'
 import { useSettingsStore } from '@/stores/settingsStore'
 import { useTaskStore } from '@/stores/taskStore'
+import { showConfirm } from '@/utils/globalConfirm'
 import AppLayout from '@/components/layout/AppLayout.vue'
 import ThemeEditor from '@/components/settings/ThemeEditor.vue'
 import SyncSettings from '@/components/settings/SyncSettings.vue'
@@ -238,7 +239,7 @@ async function handleCourseImport(e: Event) {
       window.__message?.error('未识别到有效课程')
       return
     }
-    if (confirm(`识别到 ${courses.length} 门课程，确认导入？`)) {
+    if (await showConfirm({ title: '导入课表', content: `识别到 ${courses.length} 门课程，确认导入？` })) {
       const result = await importCourses(courses)
       window.__message?.success(`导入完成：${result.success} 成功，${result.skipped} 跳过`)
     }
@@ -261,7 +262,7 @@ async function handleDeleteCourses() {
     window.__message?.info('当前没有导入的课程')
     return
   }
-  if (!confirm(`确认删除全部 ${courses.length} 门课程？此操作不可撤销。`)) return
+  if (!await showConfirm({ title: '删除课表', content: `确认删除全部 ${courses.length} 门课程？此操作不可撤销。` })) return
   try {
     let count = 0
     for (const c of courses) {

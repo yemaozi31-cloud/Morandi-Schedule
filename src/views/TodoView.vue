@@ -96,6 +96,7 @@ import type { Task } from '@/types'
 import { nlpParse } from '@/utils/nlpParser'
 import { format, parseISO, getTodayStr } from '@/utils/date'
 
+import { showConfirm } from '@/utils/globalConfirm'
 import { useDeleteTask } from '@/composables/useDeleteTask'
 import ConfirmDialog from '@/components/common/ConfirmDialog.vue'
 import AppLayout from '@/components/layout/AppLayout.vue'
@@ -198,7 +199,8 @@ async function batchComplete() {
 }
 
 async function batchDelete() {
-  if (!window.confirm(`确认删除 ${batchSelected.value.size} 项任务？此操作不可撤销。`)) return
+  const confirmed = await showConfirm({ title: '批量删除', content: `确认删除 ${batchSelected.value.size} 项任务？此操作不可撤销。` })
+  if (!confirmed) return
   let success = 0, fail = 0
   for (const id of batchSelected.value) {
     try { await taskStore.deleteTask(id); success++ } catch { fail++ }

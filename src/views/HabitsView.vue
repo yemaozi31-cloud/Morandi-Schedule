@@ -159,16 +159,6 @@ async function handleSave() {
   }
 }
 
-function showConfirm(title: string, message: string, onConfirm: () => void) {
-  window.__dialog?.warning({
-    title,
-    content: message,
-    positiveText: '确认',
-    negativeText: '取消',
-    onPositiveClick: onConfirm
-  })
-}
-
 function handleChecked(habitId: string) {
   void habitId
   // HabitCard 内部已处理打卡/取消的反馈

@@ -81,8 +81,8 @@ export function startReminderScheduler(getPendingTasks: () => Task[]): void {
     if (!granted) {
       const denied = !isTauri && Notification.permission === 'denied'
       if (denied) {
-        notifDenied.value = true
-        console.warn('[Reminder] 通知权限已被浏览器拒绝，请在地址栏🔒 → 网站设置中开启通知')
+        // 开发环境不弹横幅，正式打包后走 Tauri 通知插件
+        console.warn('[Reminder] 通知权限已被浏览器拒绝')
       } else {
         console.warn('[Reminder] 通知权限未授予，点击页面任意位置重试')
         // 浏览器模式下用户点击后重试

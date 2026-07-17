@@ -17,10 +17,10 @@ export function triggerAutoSync(): void {
       const config = settingsStore.syncConfig
       if (!config.webdavUrl || !config.nickname) return
       if (!config.autoSync) return
-      // 先拉取远程变更合并到本地
-      await pullFromWebDAV(config).catch(() => {})
-      // 再上传合并后的完整数据
+      // 先上传本地变更到云端，再拉取远程变更合并到本地
+      // push-first 确保本地删除操作不会被云端旧数据恢复
       await pushToWebDAV(config)
+      await pullFromWebDAV(config).catch(() => {})
       console.log('[AutoSync] 双向同步完成')
     } catch (e) {
       console.warn('[AutoSync] 推送失败:', e)
@@ -39,9 +39,9 @@ export function startBackgroundPolling(): void {
       const settingsStore = useSettingsStore()
       const config = settingsStore.syncConfig
       if (!config.webdavUrl || !config.autoSync) return
-      // 后台轮询：先拉取远程变更合并，再推送本地数据
-      await pullFromWebDAV(config).catch(() => {})
+      // 后台轮询：先推送本地数据，再拉取远程变更合并
       await pushToWebDAV(config).catch(() => {})
+      await pullFromWebDAV(config).catch(() => {})
       console.log('[AutoSync] 后台轮询完成')
     } catch {}
   }, POLL_INTERVAL)

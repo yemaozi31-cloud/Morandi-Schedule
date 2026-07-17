@@ -43,15 +43,15 @@ const emit = defineEmits<{
 const visible = computed(() => props.show)
 
 function handleConfirm() {
+  emit('confirm')
   visible.value = false
   emit('update:show', false)
-  emit('confirm')
 }
 
 function handleCancel() {
+  emit('cancel')
   visible.value = false
   emit('update:show', false)
-  emit('cancel')
 }
 </script>
 
