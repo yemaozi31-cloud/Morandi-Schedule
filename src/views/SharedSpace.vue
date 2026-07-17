@@ -384,12 +384,10 @@ async function handleLeave(habit: SharedHabitData) {
         count++
       }
     }
-    console.log('[handleLeave] 删除了', count, '条本地习惯记录')
     // 重新从云端拉取 + 从 IndexedDB 重新加载 habitStore
     await loadSharedData()
     await habitStore.loadHabits()
     await habitStore.loadCheckIns()
-    console.log('[handleLeave] 重新加载后 habits 数量:', habitStore.habits.size)
     window.__message?.info(`已退出「${habit.name}」，清理 ${count} 条本地记录`)
   } else {
     window.__message?.error('操作失败')

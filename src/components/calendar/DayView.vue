@@ -114,7 +114,6 @@ function handleToggle(taskId: string) {
 }
 
 function handleDelete(taskId: string) {
-  console.log('[DayView] handleDelete 被调用:', taskId)
   emit('deleteTask', taskId)
 }
 </script>

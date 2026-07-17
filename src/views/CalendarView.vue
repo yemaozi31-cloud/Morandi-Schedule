@@ -482,7 +482,6 @@ async function handleToggle(taskId: string) {
 }
 
 function handleDelete(taskId: string) {
-  console.log('[CalendarView] handleDelete 被调用:', taskId)
   origHandleDelete(taskId)
 }
 

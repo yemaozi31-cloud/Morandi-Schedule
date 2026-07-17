@@ -82,7 +82,6 @@ const { confirm, handleDelete: origHandleDelete, onDeleteConfirmed } = useDelete
 const task = computed<Task | null>(() => {
   if (!props.taskId) return null
   const found = taskStore.getTaskById(props.taskId)
-  console.log('📌 task detail:', props.taskId, found ? found.title : 'NOT FOUND')
   return found || null
 })
 
@@ -112,7 +111,6 @@ function handleEdit() {
 
 function handleDelete() {
   if (!task.value) return
-  console.log('[TaskDetailModal] handleDelete 被调用, taskId:', task.value.id)
   origHandleDelete(task.value.id)
 }
 

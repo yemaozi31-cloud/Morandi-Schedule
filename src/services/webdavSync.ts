@@ -432,7 +432,6 @@ export async function fetchSharedData(config: SyncConfig): Promise<SharedData> {
       return data
     }
     const data: SharedData = await res.json()
-    console.log('[webdavSync] fetchSharedData 成功, checkIns:', data.checkIns?.length)
     const merged = new Set([...(data.knownUsers || []), ...discovered])
     data.knownUsers = Array.from(merged).filter(u => u && u !== 'default' && u !== 'shared')
     // 去掉自动 saveSharedData — 避免读一次就写一次
@@ -455,7 +454,6 @@ async function saveSharedData(config: SyncConfig, data: SharedData): Promise<boo
       },
       body: JSON.stringify(data, null, 2)
     })
-    console.log('[webdavSync] saveSharedData PUT', url, 'status:', res.status, 'ok:', res.ok)
     return res.ok
   } catch (e) { console.error('[webdavSync] saveSharedData 失败:', e); return false }
 }

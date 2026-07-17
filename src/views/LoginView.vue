@@ -182,7 +182,6 @@ async function handleSubmit() {
       debugInfo.decryptPreview = (decrypted || '').slice(0, 100)
       if (!decrypted) {
         error.value = '密码错误'
-        console.log('[Login Debug]', JSON.stringify(debugInfo))
         return
       }
 
@@ -197,7 +196,6 @@ async function handleSubmit() {
         try { localStorage.setItem('login_debug', JSON.stringify(debugInfo)) } catch {}
         // 页面显示详细错误（完整输出）
         error.value = '调试:' + JSON.stringify(debugInfo, null, 2).slice(0, 1000)
-        console.log('[Login Debug]', JSON.stringify(debugInfo))
         return
       }
 
