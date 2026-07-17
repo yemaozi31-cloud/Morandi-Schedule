@@ -184,13 +184,14 @@ function releasePushLock(): void {
 export async function pushToWebDAV(config: SyncConfig): Promise<SyncResult> {
   await acquirePushLock()
   try {
-    // 1. 读取本地全量数据
-    const [tasks, tags, habits, habitCheckIns, pomodoroSessions] = await Promise.all([
-      db.getAll<any>('tasks'),
-      db.getAll<any>('tags'),
-      db.getAll<any>('habits'),
-      db.getAll<any>('habitCheckIns'),
-      db.getAll<any>('pomodoroSessions')
+    // 1. 读取本地全量数据（过滤已软删除的任务）
+    const allTasks = await db.getAll<any>("tasks")
+    const tasks = allTasks.filter((t: any) => !t.deletedAt)
+    const [tags, habits, habitCheckIns, pomodoroSessions] = await Promise.all([
+      db.getAll<any>("tags"),
+      db.getAll<any>("habits"),
+      db.getAll<any>("habitCheckIns"),
+      db.getAll<any>("pomodoroSessions")
     ])
 
     // 2. 打包为同步格式

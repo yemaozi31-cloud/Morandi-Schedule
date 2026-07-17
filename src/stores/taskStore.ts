@@ -262,11 +262,28 @@ export const useTaskStore = defineStore('tasks', () => {
     try {
       const now = new Date().toISOString()
       await updateTask(id, { deletedAt: now })
+      await purgeOldDeletedTasks()
     } catch (e) {
       console.error('[taskStore] deleteTask 失败:', e, 'id:', id)
       throw e
     } finally {
       isDeleting = false
+    }
+  }
+
+  /** 清理超过30天的软删除任务（从 IndexedDB 彻底删除） */
+  async function purgeOldDeletedTasks() {
+    try {
+      const cutoff = new Date(Date.now() - 30 * 24 * 60 * 60 * 1000).toISOString()
+      const all = Array.from(tasks.value.values())
+      for (const t of all) {
+        if (t.deletedAt && t.deletedAt < cutoff) {
+          await db.remove('tasks', t.id)
+          tasks.value.delete(t.id)
+        }
+      }
+    } catch (e) {
+      console.warn('[taskStore] 清理旧删除记录失败:', e)
     }
   }
 

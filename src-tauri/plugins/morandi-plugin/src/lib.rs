@@ -3,6 +3,7 @@ use tauri::{
     Runtime,
 };
 
+#[allow(unused_variables)]
 #[tauri::command]
 async fn schedule_reminder<R: Runtime>(
     _app: tauri::AppHandle<R>,
@@ -11,23 +12,17 @@ async fn schedule_reminder<R: Runtime>(
     body: String,
     id: u32,
 ) -> Result<(), String> {
-    // Android AlarmManager 原生提醒（暂未实现）
-    #[cfg(target_os = "android")]
-    {
-        // TODO: 接入 Android AlarmManager
-        let _ = (time_ms, title, body, id);
-    }
-    let _ = (time_ms, title, body, id);
+    // TODO: Android AlarmManager 原生提醒
     Ok(())
 }
 
+#[allow(unused_variables)]
 #[tauri::command]
 async fn cancel_reminder<R: Runtime>(
     _app: tauri::AppHandle<R>,
     id: u32,
 ) -> Result<(), String> {
     // TODO: 取消 Android AlarmManager 提醒
-    let _ = id;
     Ok(())
 }
 
