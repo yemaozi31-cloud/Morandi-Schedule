@@ -22,11 +22,25 @@ Thumbs.db
 
 # Logs
 *.log
+cargo_*.txt
 
 # Build artifacts
-MorandiSchedule-latest.exe
 *.apk
 *.aab
+*.exe
+MorandiSchedule-latest.exe
 src-tauri/gen/android/app/build/
 src-tauri/gen/android/.gradle/
 src-tauri/gen/android/.kotlin/
+
+# Tool caches
+.firecrawl/
+.trae/
+
+# Old planning docs / screenshots
+icon-concepts/
+DESIGN.md
+FLOW.md
+REVIEW.md
+TASK_BOOK.md
+cloudbaserc.json
