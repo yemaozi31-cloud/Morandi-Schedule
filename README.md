@@ -12,8 +12,7 @@
 
 | 平台 | 安装包 | 说明 |
 |------|--------|------|
-| **Windows** | [Morandi Schedule_0.5.2_x64-setup.exe](https://github.com/yemaozi31-cloud/Morandi-Schedule/releases/latest/download/Morandi.Schedule_0.5.2_x64-setup.exe) | NSIS 安装包 |
-| **macOS** | 开发中 | Intel / Apple Silicon |
+| **Windows** | [morandi-schedule.exe](https://github.com/yemaozi31-cloud/Morandi-Schedule/releases/latest/download/morandi-schedule.exe) | 免安装，双击运行 |
 | **Android** | [app-universal-arm64-v8a-release.apk](https://github.com/yemaozi31-cloud/Morandi-Schedule/releases/latest/download/app-universal-arm64-v8a-release.apk) | 24MB，覆盖 99% 机型 |
 
 > 下载需要登录 GitHub 账号。也可在 [GitHub Releases](https://github.com/yemaozi31-cloud/Morandi-Schedule/releases) 页面查看所有版本。
