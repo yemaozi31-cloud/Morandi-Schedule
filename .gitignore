@@ -44,3 +44,9 @@ FLOW.md
 REVIEW.md
 TASK_BOOK.md
 cloudbaserc.json
+
+# wrangler files
+.wrangler
+.dev.vars*
+!.dev.vars.example
+!.env.example
