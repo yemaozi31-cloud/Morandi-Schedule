@@ -32,6 +32,8 @@
     "http:allow-fetch",
     "http:allow-fetch-send",
     "http:allow-fetch-read-body",
-    "morandi-plugin:default"
+    "morandi-plugin:default",
+    "morandi-plugin:allow-scheduleReminder",
+    "morandi-plugin:allow-cancelReminder"
   ]
 }

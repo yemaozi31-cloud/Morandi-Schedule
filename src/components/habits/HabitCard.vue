@@ -141,7 +141,7 @@ const monthDays = computed(() => {
 })
 
 // 共享习惯挂载时拉取云端数据
-if (props.habit.isShared) refreshSharedStatus()
+if (props.habit.isShared) refreshSharedStatus().catch(() => {})
 
 const periodLabel = computed(() => habitStore.getPeriodLabel(props.habit.frequency))
 const periodValue = computed(() =>
@@ -178,7 +178,7 @@ const todayChecked = computed(() => {
 
 // 共享习惯数据变化时自动更新状态
 if (props.habit.isShared) {
-  watch(() => props.habit, () => refreshSharedStatus(), { deep: false })
+  watch(() => props.habit, () => refreshSharedStatus().catch(() => {}), { deep: false })
 }
 
 const progressPercent = computed(() =>

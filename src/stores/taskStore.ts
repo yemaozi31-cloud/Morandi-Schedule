@@ -388,7 +388,7 @@ export const useTaskStore = defineStore('tasks', () => {
         timeMs: triggerMs, title: task.title,
         body: task.dueDate + (task.dueTime ? ' ' + task.dueTime : ''),
         id: Math.abs(Array.from(task.id).reduce((h, c) => ((h << 5) - h) + c.charCodeAt(0), 0)) % 100000
-      })
+      }).catch(() => {})
     } catch {}
   }
 
@@ -397,7 +397,7 @@ export const useTaskStore = defineStore('tasks', () => {
     try {
       import('@tauri-apps/api/core').then(({ invoke }) => {
         const id = Math.abs(Array.from(taskId).reduce((h, c) => ((h << 5) - h) + c.charCodeAt(0), 0)) % 100000
-        invoke('plugin:morandi-plugin|cancelReminder', { id })
+        invoke('plugin:morandi-plugin|cancelReminder', { id }).catch(() => {})
       })
     } catch {}
   }

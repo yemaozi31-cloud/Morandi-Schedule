@@ -74,8 +74,10 @@ onErrorCaptured((err, instance, info) => {
 
 // 未捕获的 Promise 异常
 window.addEventListener('unhandledrejection', (event) => {
-  console.error('[未捕获Promise异常]', event.reason)
-  window.__message?.error('操作异常，请重试')
+  const reason = event.reason
+  const msg = reason?.message || reason?.toString?.() || '未知错误'
+  console.error('[未捕获Promise异常]', reason)
+  window.__message?.error(`操作异常: ${msg}`)
 })
 
 function handleGlobalConfirm(value: boolean) {

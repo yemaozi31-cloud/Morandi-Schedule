@@ -2301,7 +2301,7 @@ dependencies = [
 
 [[package]]
 name = "morandi-schedule"
-version = "0.5.1"
+version = "0.5.2"
 dependencies = [
  "morandi-plugin",
  "serde",
