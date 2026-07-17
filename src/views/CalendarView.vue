@@ -155,6 +155,7 @@
 
 <script setup lang="ts">
 import { ref, computed, watch, onMounted } from 'vue'
+import { useRoute, useRouter } from 'vue-router'
 import type { Task } from '@/types'
 import { useTaskStore } from '@/stores/taskStore'
 import { useUiStore } from '@/stores/uiStore'
@@ -186,8 +187,20 @@ const editingCourse = ref<any>(null)
 const addingCourse = ref(false)
 
 const currentDate = ref(getTodayStr())
-const currentView = ref(localStorage.getItem('cal_view') || 'month')
+const route = useRoute()
+const router = useRouter()
+
+// 从 localStorage 恢复上次视图，但如果 URL 带 ?view=week 则强制周视图（"本周"入口）
+const savedView = localStorage.getItem('cal_view') || 'month'
+const forceWeek = route.query.view === 'week'
+const currentView = ref(forceWeek ? 'week' : savedView)
 watch(currentView, (v) => localStorage.setItem('cal_view', v))
+
+// 如果是从"本周"跳过来的（?view=week），定位到今天并清除参数
+if (forceWeek) {
+  currentDate.value = getTodayStr()
+  router.replace({ query: {} })
+}
 const selectedDay = ref('')
 const editingTask = ref<Task | null>(null)
 const quickAddText = ref('')
