@@ -76,21 +76,43 @@ function authHeader(username: string, password: string): Record<string, string> 
   }
 }
 
-/** 拼接同步文件完整 URL（自动编码中文路径，开发环境走 Vite 代理绕过 CORS） */
-function syncFileUrl(config: SyncConfig): string {
-  const base = config.webdavUrl.endsWith('/') ? config.webdavUrl : config.webdavUrl + '/'
-  // 统一用昵称做文件名，多设备要同步必须设置相同昵称
-  const fileName = `${config.nickname || 'default'}-sync.json`
+/** WebDAV 代理地址（根据部署环境选择） */
+const WEBDAV_PROXY = (() => {
+  const host = typeof window !== 'undefined' ? window.location.hostname : ''
+  // 腾讯云 CloudBase（国内部署）
+  if (host.includes('tcloudbaseapp.com')) {
+    return 'https://cloudebase-d5ghkl2v57487dd1a-1425679277.ap-shanghai.app.tcloudbase.com/webdav-proxy'
+  }
+  // Cloudflare Pages 或其他海外部署
+  return ''
+})()
 
-  // Tauri 桌面端：直连 WebDAV; 浏览器模式：走 Vite 代理
-  const isTauri = window.location.protocol.startsWith('tauri') ||
-                  window.location.hostname.includes('tauri')
+/** 构造完整的 WebDAV URL */
+function fullWebdavUrl(config: SyncConfig, fileName: string): string {
+  const base = config.webdavUrl.endsWith('/') ? config.webdavUrl : config.webdavUrl + '/'
+
+  // Tauri 桌面端：直连 WebDAV
+  const isTauri = typeof window !== 'undefined' && (
+    window.location.protocol.startsWith('tauri') ||
+    window.location.hostname.includes('tauri')
+  )
   if (isTauri) {
     return base + fileName
   }
-  // 浏览器模式：取 URL 的路径部分，Vite 代理自动补协议和 host
+
+  // 浏览器模式：走代理（解决 CORS 问题）
   const parsed = new URL(base)
+  if (WEBDAV_PROXY) {
+    return WEBDAV_PROXY + parsed.pathname + fileName
+  }
+  // 无代理时直接返回路径（本机开发模式 Vite 代理或无法同步）
   return parsed.pathname + fileName
+}
+
+/** 拼接同步文件完整 URL */
+function syncFileUrl(config: SyncConfig): string {
+  const fileName = `${config.nickname || 'default'}-sync.json`
+  return fullWebdavUrl(config, fileName)
 }
 
 /** 获取或生成本设备唯一标识（存 localStorage） */
@@ -376,17 +398,9 @@ interface SharedData {
   knownUsers: string[]
 }
 
-/** 共享文件 URL（与 syncFileUrl 一样处理 Vite 代理） */
+/** 共享文件 URL */
 function sharedFileUrl(config: SyncConfig): string {
-  const base = config.webdavUrl.endsWith('/') ? config.webdavUrl : config.webdavUrl + '/'
-  const isTauri = window.location.protocol.startsWith('tauri') ||
-                  window.location.hostname.includes('tauri')
-  if (isTauri) {
-    return base + 'shared.json'
-  } else {
-    const parsed = new URL(base)
-    return parsed.pathname + 'shared.json'
-  }
+  return fullWebdavUrl(config, 'shared.json')
 }
 
 /** 扫描 WebDAV 目录下所有 *-sync.json 文件，提取用户名 */

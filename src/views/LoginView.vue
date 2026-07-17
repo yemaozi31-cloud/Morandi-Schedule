@@ -115,13 +115,23 @@ function importConfig() {
   }
 }
 
+/** WebDAV 代理地址 */
+const WEBDAV_PROXY = (() => {
+  const host = typeof window !== 'undefined' ? window.location.hostname : ''
+  if (host.includes('tcloudbaseapp.com')) {
+    return 'https://cloudebase-d5ghkl2v57487dd1a-1425679277.ap-shanghai.app.tcloudbase.com/webdav-proxy'
+  }
+  return ''
+})()
+
 /** 获取用户 WebDAV 文件 URL */
 function getUserFileUrl(nickname: string): string {
   const base = config.value.webdavUrl.endsWith('/') ? config.value.webdavUrl : config.value.webdavUrl + '/'
   const fileName = `${nickname}-sync.json`
   const fullUrl = base + fileName
-  // Tauri: 直连; 浏览器: 走 Vite 代理
-  return isTauri ? fullUrl : new URL(fullUrl).pathname
+  if (isTauri) return fullUrl
+  if (WEBDAV_PROXY) return WEBDAV_PROXY + new URL(fullUrl).pathname
+  return new URL(fullUrl).pathname
 }
 
 /** 生成 WebDAV Basic Auth header */
