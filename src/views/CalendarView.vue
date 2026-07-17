@@ -192,15 +192,25 @@ const router = useRouter()
 
 // 从 localStorage 恢复上次视图，但如果 URL 带 ?view=week 则强制周视图（"本周"入口）
 const savedView = localStorage.getItem('cal_view') || 'month'
-const forceWeek = route.query.view === 'week'
-const currentView = ref(forceWeek ? 'week' : savedView)
+const currentView = ref(savedView)
 watch(currentView, (v) => localStorage.setItem('cal_view', v))
 
-// 如果是从"本周"跳过来的（?view=week），定位到今天并清除参数
-if (forceWeek) {
+// 处理 ?view=week 参数：强制切换到周视图并定位到今天
+function applyWeekView() {
+  currentView.value = 'week'
   currentDate.value = getTodayStr()
   router.replace({ query: {} })
 }
+
+// 首次加载时检测
+if (route.query.view === 'week') {
+  applyWeekView()
+}
+
+// 已加载后再次点击"本周"（query 变化，组件不重建）
+watch(() => route.query.view, (newVal) => {
+  if (newVal === 'week') applyWeekView()
+})
 const selectedDay = ref('')
 const editingTask = ref<Task | null>(null)
 const quickAddText = ref('')

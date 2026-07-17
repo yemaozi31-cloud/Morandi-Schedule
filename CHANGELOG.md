@@ -1,5 +1,13 @@
 # Changelog
 
+## [0.5.3] - 2026-07-17
+
+### Fixed
+- 托盘菜单无响应：Rust eval + 前端 __trayCmd 注册
+- 标签页/数据管理弹窗：Naive UI 改用全局 ConfirmDialog
+- 本周导航强制周视图：?view=week 参数隔离，不影响日历视图记忆
+- 同步策略：pull-first + 统一文件名
+
 ## [0.5.2] - 2026-07-17
 
 ### Fixed
