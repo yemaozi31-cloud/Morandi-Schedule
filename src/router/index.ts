@@ -16,9 +16,7 @@ const routes: RouteRecordRaw[] = [
   },
   {
     path: '/upcoming',
-    name: 'upcoming',
-    component: () => import('@/views/UpcomingView.vue'),
-    meta: { title: '本周', nav: true }
+    redirect: '/calendar'
   },
   {
     path: '/all',

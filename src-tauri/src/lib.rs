@@ -6,7 +6,7 @@ mod desktop {
     use tauri::menu::{MenuBuilder, MenuItemBuilder};
     use tauri::tray::TrayIconBuilder;
 
-    /// 通过 eval 执行 JS 命令
+    /// 通过 eval 调用前端的 __trayCmd 函数
     pub fn tray_exec(app: &tauri::AppHandle, cmd: &str) {
         if let Some(window) = app.get_webview_window("main") {
             let safe_cmd = cmd.replace('\'', "\\'");

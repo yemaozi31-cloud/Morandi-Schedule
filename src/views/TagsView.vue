@@ -84,6 +84,7 @@ import type { Tag } from '@/types'
 import AppLayout from '@/components/layout/AppLayout.vue'
 import Icon from '@/components/common/Icon.vue'
 import MobileBackLink from '@/components/common/MobileBackLink.vue'
+import { showConfirm } from '@/utils/globalConfirm'
 
 const tagStore = useTagStore()
 const taskStore = useTaskStore()
@@ -93,16 +94,6 @@ const editingTag = ref<Tag | null>(null)
 const formName = ref('')
 const formColor = ref('#A0B5C4')
 const nameInput = ref<HTMLInputElement>()
-
-function showConfirm(title: string, message: string, onConfirm: () => void) {
-  window.__dialog?.warning({
-    title,
-    content: message,
-    positiveText: '确认',
-    negativeText: '取消',
-    onPositiveClick: onConfirm
-  })
-}
 
 const colors = [
   '#C4A0A0', '#D4B0A0', '#D4C09E', '#A0C4A0',
@@ -141,15 +132,15 @@ async function handleSave() {
   }
 }
 
-function confirmDelete(tag: Tag) {
-  showConfirm('删除标签', `确认删除标签"${tag.name}"？`, async () => {
-    try {
-      await tagStore.deleteTag(tag.id)
-      window.__message?.success('标签已删除')
-    } catch {
-      window.__message?.error('删除标签失败')
-    }
-  })
+async function confirmDelete(tag: Tag) {
+  const ok = await showConfirm({ title: '删除标签', content: `确认删除标签"${tag.name}"？` })
+  if (!ok) return
+  try {
+    await tagStore.deleteTag(tag.id)
+    window.__message?.success('标签已删除')
+  } catch {
+    window.__message?.error('删除标签失败')
+  }
 }
 
 function getTaskCount(tagId: string): number {

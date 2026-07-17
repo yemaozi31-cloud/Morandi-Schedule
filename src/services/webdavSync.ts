@@ -79,9 +79,8 @@ function authHeader(username: string, password: string): Record<string, string> 
 /** 拼接同步文件完整 URL（自动编码中文路径，开发环境走 Vite 代理绕过 CORS） */
 function syncFileUrl(config: SyncConfig): string {
   const base = config.webdavUrl.endsWith('/') ? config.webdavUrl : config.webdavUrl + '/'
-  // 用昵称做文件名，没有昵称就用默认 syncFileName
-  const nick = config.nickname || 'default'
-  const fileName = `${nick}-sync.json`
+  // 统一用昵称做文件名，多设备要同步必须设置相同昵称
+  const fileName = `${config.nickname || 'default'}-sync.json`
 
   // Tauri 桌面端：直连 WebDAV; 浏览器模式：走 Vite 代理
   const isTauri = window.location.protocol.startsWith('tauri') ||
@@ -326,12 +325,13 @@ export async function pullFromWebDAV(config: SyncConfig): Promise<SyncResult> {
  *   - 他设备新增 → push 上传（本地数据不变）→ pull 下载他设备新增 → ✅ 合并到本地
  */
 export async function sync(config: SyncConfig): Promise<SyncResult> {
-  // 1. 先上传本地全量数据到云端
+  // 1. 先从云端拉取其他设备的变更合并到本地
+  // pull-first 确保多设备同步时不会遗漏其他设备的新增/修改
+  const pull = await pullFromWebDAV(config)
+
+  // 2. 再上传合并后的完整数据到云端
   const push = await pushToWebDAV(config)
   if (!push.ok) return push
-
-  // 2. 再从云端拉取其他设备的变更合并到本地
-  const pull = await pullFromWebDAV(config)
 
   if (!pull.ok) {
     // 拉取失败但推送成功的场景（如云端本来就没数据）
@@ -343,7 +343,7 @@ export async function sync(config: SyncConfig): Promise<SyncResult> {
 
   return {
     ok: true,
-    message: `同步完成\n${push.message}\n${pull.message}`
+    message: `同步完成\n${pull.message}\n${push.message}`
   }
 }
 

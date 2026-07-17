@@ -2,7 +2,7 @@ export const NAV_ITEMS = [
   // 一级导航（核心）
   { key: 'inbox', label: '随记', icon: 'inbox', path: '/inbox', section: 'primary' },
   { key: 'today', label: '今天', icon: 'star', path: '/', section: 'primary' },
-  { key: 'upcoming', label: '本周', icon: 'calendar', path: '/upcoming', section: 'primary' },
+  { key: 'upcoming', label: '本周', icon: 'calendar', path: '/calendar', section: 'primary' },
   { key: 'all', label: '所有任务', icon: 'list', path: '/all', section: 'primary' },
   // 分隔
   { key: 'separator-1', label: '—', icon: '', path: '', section: 'separator' },

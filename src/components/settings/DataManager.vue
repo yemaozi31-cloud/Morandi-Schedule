@@ -31,16 +31,7 @@
 <script setup lang="ts">
 import { ref } from 'vue'
 import { getAll, get, set, clear } from '@/db'
-
-function showConfirm(title: string, message: string, onConfirm: () => void) {
-  window.__dialog?.warning({
-    title,
-    content: message,
-    positiveText: '确认',
-    negativeText: '取消',
-    onPositiveClick: onConfirm
-  })
-}
+import { showConfirm } from '@/utils/globalConfirm'
 
 async function handleExport() {
   try {
@@ -103,18 +94,18 @@ async function handleImport(e: Event) {
 }
 
 async function handleClear() {
-  showConfirm('清除所有数据', '确认清除所有数据？此操作不可撤销！所有任务、标签、习惯和设置将被永久删除。', async () => {
-    try {
-      const stores = ['tasks', 'tags', 'settings', 'habits', 'habitCheckIns', 'pomodoroSessions']
-      for (const store of stores) {
-        await clear(store)
-      }
-      window.__message?.success('所有数据已清除')
-      setTimeout(() => location.reload(), 1000)
-    } catch (e) {
-      window.__message?.error('清除失败')
+  const ok = await showConfirm({ title: '清除所有数据', content: '确认清除所有数据？此操作不可撤销！所有任务、标签、习惯和设置将被永久删除。' })
+  if (!ok) return
+  try {
+    const stores = ['tasks', 'tags', 'settings', 'habits', 'habitCheckIns', 'pomodoroSessions']
+    for (const store of stores) {
+      await clear(store)
     }
-  })
+    window.__message?.success('所有数据已清除')
+    setTimeout(() => location.reload(), 1000)
+  } catch (e) {
+    window.__message?.error('清除失败')
+  }
 }
 </script>
 

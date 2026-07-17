@@ -64,6 +64,24 @@ const uiStore = useUiStore()
 
 const router = useRouter()
 const loading = ref(true)
+// 注册托盘菜单回调（Rust 通过 eval 调用此函数）
+window.__trayCmd = (cmd: string) => {
+  // 改窗口标题作为反馈（alert 在 Tauri WebView 中可能被禁用）
+  document.title = `托盘: ${cmd}`
+  console.log('[TrayCmd]', cmd)
+
+  const routes: Record<string, string> = {
+    'tray-new-task': '/',
+    'tray-goto-today': '/',
+    'tray-goto-calendar': '/calendar',
+    'tray-goto-settings': '/settings',
+  }
+  const path = routes[cmd]
+  if (path) router.push(path)
+  if (cmd === 'tray-new-task') {
+    setTimeout(() => uiStore.openNewTaskForm(), 100)
+  }
+}
 
 // 全局错误边界 - 捕获子组件渲染期间的未处理错误
 onErrorCaptured((err, instance, info) => {
@@ -132,6 +150,8 @@ onMounted(async () => {
     startBackgroundPolling()
     // 启动离线操作队列监控
     startOfflineMonitor()
+
+    // 托盘菜单监听已在 setup 中注册
   } catch (e) {
     console.error('Failed to load initial data:', e)
     window.__message?.error('数据加载失败，请刷新重试')

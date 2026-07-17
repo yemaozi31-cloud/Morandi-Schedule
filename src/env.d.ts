@@ -22,5 +22,6 @@ declare global {
       info: (msg: string) => void
     }
     __dialog?: DialogApi
+    __trayCmd?: (cmd: string) => void
   }
 }
