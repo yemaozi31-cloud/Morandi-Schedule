@@ -174,6 +174,10 @@ function onDragEnd() {
   dragEnterCount.value = 0
 }
 
+function onDragOver(event: DragEvent) {
+  event.preventDefault()
+}
+
 function onDragEnter(section: PeriodKey) {
   dragEnterCount.value++
   dragOverSection.value = section

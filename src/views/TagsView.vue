@@ -84,6 +84,7 @@ import type { Tag } from '@/types'
 import AppLayout from '@/components/layout/AppLayout.vue'
 import Icon from '@/components/common/Icon.vue'
 import MobileBackLink from '@/components/common/MobileBackLink.vue'
+import EmptyState from '@/components/common/EmptyState.vue'
 
 const tagStore = useTagStore()
 const taskStore = useTaskStore()
