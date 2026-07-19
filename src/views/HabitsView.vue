@@ -18,6 +18,7 @@
             :habit="habit"
             compact
             :expanded="expandedHabits[habit.id]"
+            :refresh-trigger="sharedRefreshTrigger"
             @checked="handleChecked"
             @toggle-expand="toggleExpand(habit.id)"
           />
@@ -28,6 +29,7 @@
                 :habit-id="habit.id"
                 :habit-name="habit.name"
                 :habit-target="habit.target"
+                :refresh-trigger="sharedRefreshTrigger"
               />
             </div>
           </transition>
@@ -117,6 +119,8 @@ const habitStore = useHabitStore()
 
 const showForm = ref(false)
 const expandedHabits = ref<Record<string, boolean>>({})
+const sharedRefreshTrigger = ref(0)
+setInterval(() => { sharedRefreshTrigger.value++ }, 60000)
 
 function toggleExpand(id: string) {
   expandedHabits.value[id] = !expandedHabits.value[id]

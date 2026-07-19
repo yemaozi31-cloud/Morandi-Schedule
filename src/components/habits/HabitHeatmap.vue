@@ -27,14 +27,14 @@
 </template>
 
 <script setup lang="ts">
-import { computed, ref, onMounted } from 'vue'
+import { computed, ref, onMounted, watch } from 'vue'
 import { useHabitStore } from '@/stores/habitStore'
 import { useSettingsStore } from '@/stores/settingsStore'
 import { format, startOfMonth, endOfMonth, startOfWeek, endOfWeek, addMonths, subMonths, getTodayStr } from '@/utils/date'
 import { fetchSharedCheckIns } from '@/services/webdavSync'
 import Icon from '@/components/common/Icon.vue'
 
-const props = defineProps<{ habitId: string; habitName: string; habitTarget: number }>()
+const props = defineProps<{ habitId: string; habitName: string; habitTarget: number; refreshTrigger?: number }>()
 
 const habitStore = useHabitStore()
 const settingsStore = useSettingsStore()
@@ -53,14 +53,16 @@ const myNick = computed(() => settingsStore.syncConfig.nickname)
 /** 云端共享打卡数据 */
 const sharedCheckIns = ref<{ date: string }[]>([])
 
-onMounted(async () => {
-  if (isShared.value && sharedName.value && myNick.value) {
-    try {
-      const data = await fetchSharedCheckIns(settingsStore.syncConfig)
-      sharedCheckIns.value = data.filter(c => c.habitName === sharedName.value && c.nick === myNick.value)
-    } catch { /* ignore */ }
-  }
-})
+async function loadSharedCheckIns() {
+  if (!isShared.value || !sharedName.value || !myNick.value) return
+  try {
+    const data = await fetchSharedCheckIns(settingsStore.syncConfig)
+    sharedCheckIns.value = data.filter(c => c.habitName === sharedName.value && c.nick === myNick.value)
+  } catch { /* ignore */ }
+}
+
+onMounted(() => loadSharedCheckIns())
+watch(() => props.refreshTrigger, () => loadSharedCheckIns())
 
 function getDayValue(dateStr: string): number {
   if (isShared.value) return sharedCheckIns.value.some(c => c.date === dateStr) ? 1 : 0

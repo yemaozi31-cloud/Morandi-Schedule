@@ -465,9 +465,13 @@ export async function fetchSharedCheckIns(config: SyncConfig): Promise<SharedChe
   return data.checkIns
 }
 
-/** 提交打卡记录 */
+/** 提交打卡记录（自动去重：同人+同习惯+同日 不重复添加） */
 export async function submitCheckIn(config: SyncConfig, checkIn: SharedCheckIn): Promise<boolean> {
   const data = await fetchSharedData(config)
+  const exists = data.checkIns.some(
+    c => c.habitName === checkIn.habitName && c.nick === checkIn.nick && c.date === checkIn.date
+  )
+  if (exists) return true // 已存在，不重复添加
   data.checkIns.push(checkIn)
   return saveSharedData(config, data)
 }

@@ -72,6 +72,7 @@
                 :key="habit.id"
                 :habit="habit"
                 compact
+                :refresh-trigger="sharedRefreshTrigger"
                 @checked="onHabitChecked"
               />
             </div>
@@ -144,6 +145,10 @@ const quickAddText = ref('')
 const quickAddInput = ref<HTMLInputElement>()
 const habitsExpand = ref(true)
 const { confirm: deleteConfirm, handleDelete, onDeleteConfirmed } = useDeleteTask()
+const sharedRefreshTrigger = ref(0)
+
+// 共享习惯60秒轮询
+setInterval(() => { sharedRefreshTrigger.value++ }, 60000)
 
 
 const todayHabits = computed(() =>

@@ -83,6 +83,7 @@ const props = defineProps<{
   habit: Habit
   compact?: boolean
   expanded?: boolean
+  refreshTrigger?: number
 }>()
 
 const emit = defineEmits<{
@@ -93,23 +94,29 @@ const emit = defineEmits<{
 
 const habitStore = useHabitStore()
 const settingsStore = useSettingsStore()
-
-/** 共享习惯今日是否已打卡（跟随云端，实时更新） */
-const sharedTodayChecked = ref(false)
 const cfg = computed(() => settingsStore.syncConfig)
 
-/** 共享习惯的所有云端打卡记录 */
-const allSharedCheckIns = ref<{ nick: string; date: string }[]>([])
+/** 共享习惯：从云端获取的打卡日期集合 */
+const sharedCheckInDates = ref<Set<string>>(new Set())
 
-
-/** 从本地 habitStore 读取共享打卡状态（不再从云端拉取） */
-async function refreshSharedStatus() {
+/** 从云端加载共享打卡数据 */
+async function refreshSharedFromCloud() {
   if (!props.habit.isShared || !cfg.value.nickname || !props.habit.sharedHabitName) return
-  const today = getTodayStr()
-  const localCheckIns = habitStore.getCheckInsForHabit(props.habit.id)
-  allSharedCheckIns.value = localCheckIns.map(c => ({ nick: cfg.value.nickname!, date: c.date }))
-  sharedTodayChecked.value = localCheckIns.some(c => c.date === today)
+  try {
+    const { fetchSharedCheckIns } = await import('@/services/webdavSync')
+    const data = await fetchSharedCheckIns(cfg.value)
+    const myDates = data
+      .filter(c => c.habitName === props.habit.sharedHabitName && c.nick === cfg.value.nickname)
+      .map(c => c.date)
+    sharedCheckInDates.value = new Set(myDates)
+  } catch { /* 静默失败 */ }
 }
+
+/** 今天是否已打卡（共享/普通通用） */
+const todayChecked = computed(() => {
+  if (props.habit.isShared) return sharedCheckInDates.value.has(getTodayStr())
+  return habitStore.getCheckInsForHabit(props.habit.id).some(c => c.date === getTodayStr())
+})
 
 // ── 热力图月份状态 ──────────────────────────────
 const heatmapViewDate = ref(new Date())
@@ -130,32 +137,26 @@ const monthDays = computed(() => {
   for (let day = 1; day <= daysInMonth; day++) {
     const dateStr = `${year}-${String(month + 1).padStart(2, '0')}-${String(day).padStart(2, '0')}`
     if (props.habit.isShared) {
-      // 共享习惯：查云端打卡
-      result.push(allSharedCheckIns.value.some(c => c.nick === cfg.value.nickname && c.date === dateStr) ? dateStr : '')
+      result.push(sharedCheckInDates.value.has(dateStr) ? dateStr : '')
     } else {
-      // 普通习惯：查本地打卡
       result.push(habitStore.getCheckInsForHabit(props.habit.id).some(c => c.date === dateStr) ? dateStr : '')
     }
   }
   return result
 })
 
-// 共享习惯挂载时拉取云端数据
-if (props.habit.isShared) refreshSharedStatus().catch(() => {})
-
 const periodLabel = computed(() => habitStore.getPeriodLabel(props.habit.frequency))
 const periodValue = computed(() =>
-  props.habit.isShared ? (sharedTodayChecked.value ? 1 : 0) : habitStore.getPeriodValue(props.habit.id)
+  props.habit.isShared ? (todayChecked.value ? 1 : 0) : habitStore.getPeriodValue(props.habit.id)
 )
 const streak = computed(() => {
   if (props.habit.isShared) {
-    // 从云端打卡记录计算连续天数
-    const myDates = allSharedCheckIns.value.filter(c => c.nick === cfg.value.nickname).map(c => c.date).sort().reverse()
-    if (myDates.length === 0) return 0
+    const dates = Array.from(sharedCheckInDates.value).sort().reverse()
+    if (dates.length === 0) return 0
     let s = 1
-    for (let i = 1; i < myDates.length; i++) {
-      const prev = new Date(myDates[i - 1])
-      const curr = new Date(myDates[i])
+    for (let i = 1; i < dates.length; i++) {
+      const prev = new Date(dates[i - 1])
+      const curr = new Date(dates[i])
       if ((prev.getTime() - curr.getTime()) / (1000 * 60 * 60 * 24) === 1) s++
       else break
     }
@@ -170,33 +171,26 @@ const streakUnit = computed(() => {
 })
 const isCompleted = computed(() => periodValue.value >= props.habit.target)
 
-/** 今天是否已打卡（共享/普通通用） */
-const todayChecked = computed(() => {
-  if (props.habit.isShared) return sharedTodayChecked.value
-  return habitStore.getCheckInsForHabit(props.habit.id).some(c => c.date === getTodayStr())
-})
-
-// 共享习惯数据变化时自动更新状态
-if (props.habit.isShared) {
-  watch(() => props.habit, () => refreshSharedStatus().catch(() => {}), { deep: false })
-}
-
 const progressPercent = computed(() =>
   Math.min(100, Math.round((periodValue.value / props.habit.target) * 100))
 )
 
+// 共享习惯：挂载时加载 + 外部 trigger 刷新
+if (props.habit.isShared) {
+  refreshSharedFromCloud()
+  watch(() => props.refreshTrigger, () => refreshSharedFromCloud())
+}
+
 async function handleCheckIn() {
   try {
     if (props.habit.isShared) {
-      if (sharedTodayChecked.value) {
+      if (todayChecked.value) {
         await cancelCheckIn(cfg.value, props.habit.sharedHabitName!, cfg.value.nickname!)
-        await habitStore.deleteCheckIn(props.habit.id, getTodayStr())
-        sharedTodayChecked.value = false
+        sharedCheckInDates.value.delete(getTodayStr())
         window.__message?.info('已取消打卡')
       } else {
         await checkInSharedHabit(cfg.value, props.habit.sharedHabitName!, cfg.value.nickname!)
-        await habitStore.checkIn(props.habit.id, 1)
-        sharedTodayChecked.value = true
+        sharedCheckInDates.value.add(getTodayStr())
         window.__message?.success('打卡成功')
       }
       emit('checked', props.habit.id)

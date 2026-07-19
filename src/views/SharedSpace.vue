@@ -183,6 +183,9 @@ const deadlineTime = ref('09:00')
 /** 实时扫描发现的用户（每次从 WebDAV PROPFIND 获取） */
 const liveUsers = ref<string[]>([])
 
+// 共享数据60秒轮询
+setInterval(() => loadSharedData(), 60000)
+
 async function refreshLiveUsers() {
   if (!isConfigured.value) return
   try {
@@ -232,15 +235,9 @@ function getMemberHeatmap(habitName: string, nick: string): { status: string; da
   const daysInMonth = new Date(h.year, h.month + 1, 0).getDate()
   const monthStr = `${h.year}-${String(h.month + 1).padStart(2, '0')}`
   const result: { status: string; date: string }[] = []
-  const localId = nick === myNick.value ? getLocalHabitId(habitName) : null
   for (let d = 1; d <= daysInMonth; d++) {
     const dateStr = `${monthStr}-${String(d).padStart(2, '0')}`
-    let checked: boolean
-    if (localId) {
-      checked = habitStore.getCheckInsForHabit(localId).some(c => c.date === dateStr)
-    } else {
-      checked = sharedData.value.checkIns.some(c => c.habitName === habitName && c.nick === nick && c.date === dateStr)
-    }
+    let checked = sharedData.value.checkIns.some(c => c.habitName === habitName && c.nick === nick && c.date === dateStr)
     if (!checked) {
       result.push({ status: 'empty', date: '' })
     } else {
@@ -310,19 +307,9 @@ function myCheckInStatus(habitName: string): CheckInStatus {
 async function loadSharedData() {
   if (!isConfigured.value) return
   try {
-    // 从云端拉取共享数据到本地
+    // 从云端拉取共享数据
     const { fetchSharedData } = await import('@/services/webdavSync')
     const data = await fetchSharedData(config.value)
-    // 将云端打卡数据写入本地 habitStore
-    for (const ci of data.checkIns) {
-      const localId = getLocalHabitId(ci.habitName)
-      if (!localId) continue
-      const localCheckIns = habitStore.getCheckInsForHabit(localId)
-      if (!localCheckIns.some(c => c.date === ci.date)) {
-        // 本地没有这条记录，写入本地
-        await habitStore.checkIn(localId, 1)
-      }
-    }
     sharedData.value = data
     await refreshLiveUsers()
   } catch { /* 静默失败 */ }
