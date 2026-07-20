@@ -186,19 +186,29 @@ async function handleCheckIn() {
     if (props.habit.isShared) {
       if (todayChecked.value) {
         const ok = await cancelCheckIn(cfg.value, props.habit.sharedHabitName!, cfg.value.nickname!)
-        if (ok) {
-          sharedCheckInDates.value.delete(getTodayStr())
-          window.__message?.info('已取消打卡')
-        } else {
+        if (!ok) {
           window.__message?.error('取消失败，请检查网络')
+        } else {
+          // 取消后重新拉云端验证
+          await refreshSharedFromCloud()
+          if (!todayChecked.value) {
+            window.__message?.info('已取消打卡')
+          } else {
+            window.__message?.error('取消失败（数据冲突），请重试')
+          }
         }
       } else {
         const ok = await checkInSharedHabit(cfg.value, props.habit.sharedHabitName!, cfg.value.nickname!)
-        if (ok) {
-          sharedCheckInDates.value.add(getTodayStr())
-          window.__message?.success('打卡成功')
-        } else {
+        if (!ok) {
           window.__message?.error('打卡失败，请检查网络')
+        } else {
+          // 打卡后重新拉云端验证
+          await refreshSharedFromCloud()
+          if (todayChecked.value) {
+            window.__message?.success('打卡成功')
+          } else {
+            window.__message?.error('打卡失败（数据冲突），请重试')
+          }
         }
       }
       emit('checked', props.habit.id)
