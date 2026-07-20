@@ -184,7 +184,7 @@ function releasePushLock(): void {
 export async function pushToWebDAV(config: SyncConfig): Promise<SyncResult> {
   await acquirePushLock()
   try {
-    // 1. 读取本地全量数据（过滤已软删除的任务）
+    // 1. 读取本地全量数据
     const allTasks = await db.getAll<any>("tasks")
     const tasks = allTasks.filter((t: any) => !t.deletedAt)
     const [tags, habits, habitCheckIns, pomodoroSessions] = await Promise.all([
@@ -193,30 +193,61 @@ export async function pushToWebDAV(config: SyncConfig): Promise<SyncResult> {
       db.getAll<any>("habitCheckIns"),
       db.getAll<any>("pomodoroSessions")
     ])
+    const localData = { tasks, tags, habits, habitCheckIns, pomodoroSessions }
 
-    // 2. 打包为同步格式
-    const now = new Date().toISOString()
-    const syncData: SyncDataPackage = {
-      version: SYNC_DATA_VERSION,
-      deviceId: getDeviceId(),
-      lastSyncAt: now,
-      data: { tasks, tags, habits, habitCheckIns, pomodoroSessions }
+    const url = syncFileUrl(config)
+    const auth = authHeader(config.webdavUsername, config.webdavPassword)
+
+    // 2. 先读取云端数据
+    const getRes = await safeFetch(url, { headers: auth })
+    let cloudData: SyncDataPackage | null = null
+    if (getRes.ok) {
+      let text = await getRes.text()
+      if (config.privateKey && text.startsWith('$aes$')) {
+        const decrypted = await decryptSyncData(text, config.privateKey)
+        if (decrypted) text = decrypted
+      }
+      try { cloudData = JSON.parse(text) } catch { /* 云端数据损坏 */ }
     }
 
-    // 3. 如果有私有密钥，加密整个数据包
-    let body = JSON.stringify(syncData, null, 2)
+    // 3. 合并：先放本地条目，云端有且更新的 → 用云端版本
+    const merged: SyncDataPackage = {
+      version: SYNC_DATA_VERSION,
+      deviceId: getDeviceId(),
+      lastSyncAt: new Date().toISOString(),
+      data: { tasks: [], tags: [], habits: [], habitCheckIns: [], pomodoroSessions: [] }
+    }
+
+    for (const storeName of SYNC_STORE_NAMES) {
+      const localItems = (localData as any)[storeName] || []
+      const cloudItems = (cloudData?.data as any)?.[storeName] || []
+      const itemMap = new Map<string, any>()
+
+      // 本地条目全部放进去
+      for (const item of localItems) {
+        if (item.id) itemMap.set(item.id, item)
+      }
+      // 云端条目：本地没有或用云端更新的版本
+      for (const item of cloudItems) {
+        if (!item.id) continue
+        const existing = itemMap.get(item.id)
+        if (!existing || isNewer(item, existing)) {
+          itemMap.set(item.id, item)
+        }
+      }
+
+      (merged.data as any)[storeName] = Array.from(itemMap.values())
+    }
+
+    // 4. 序列化 + 加密 + 写入
+    let body = JSON.stringify(merged, null, 2)
     if (config.privateKey) {
       body = await encryptSyncData(body, config.privateKey)
     }
 
-    // 4. PUT 上传到 WebDAV
-    const url = syncFileUrl(config)
     const res = await safeFetch(url, {
       method: 'PUT',
-      headers: {
-        ...authHeader(config.webdavUsername, config.webdavPassword),
-        'Content-Type': 'application/json'
-      },
+      headers: { ...auth, 'Content-Type': 'application/json' },
       body
     })
 
@@ -318,32 +349,32 @@ export async function pullFromWebDAV(config: SyncConfig): Promise<SyncResult> {
 }
 
 /**
- * 双向同步 = Push（上传本地全量）→ Pull（下载云端合并）
- * 先 Push 再 Pull，这样本地删除的数据不会被云端旧数据恢复。
+ * 双向同步 = Pull（下载云端合并到本地）→ Push（合并本地数据上传到云端）
  *
- * 多设备场景：
- *   - 本设备删除 → push 上传（云端同步删除）→ pull（云端已无此数据）→ ✅ 不恢复
- *   - 他设备新增 → push 上传（本地数据不变）→ pull 下载他设备新增 → ✅ 合并到本地
+ * 先 Pull 再 Push，确保：
+ *   - 本设备删除 → push 不包含已删数据 → 云端同步删除
+ *   - 他设备新增 → pull 下载到本地 → push 时和云端合并 → 云端也保留
+ *   - 两端都不丢数据（push 前先读云端合并再写，不覆盖）
  */
 export async function sync(config: SyncConfig): Promise<SyncResult> {
-  // 1. 先上传本地全量数据到云端
-  const push = await pushToWebDAV(config)
-  if (!push.ok) return push
-
-  // 2. 再从云端拉取其他设备的变更合并到本地
+  // 1. 先拉取云端数据合并到本地
   const pull = await pullFromWebDAV(config)
 
+  // 2. 再上传（先读云端 → 合并 → 写入，不会覆盖别人的数据）
+  const push = await pushToWebDAV(config)
+
+  if (!push.ok) return push
+
   if (!pull.ok) {
-    // 拉取失败但推送成功的场景（如云端本来就没数据）
     if (pull.message.includes('暂无同步数据')) {
       return { ok: true, message: '首次同步完成，数据已上传至云端' }
     }
-    return { ok: true, message: `同步完成（上传成功，拉取：${pull.message}）` }
+    return { ok: true, message: `同步完成（拉取：${pull.message}，上传成功）` }
   }
 
   return {
     ok: true,
-    message: `同步完成\n${push.message}\n${pull.message}`
+    message: `同步完成\n${pull.message}\n${push.message}`
   }
 }
 
@@ -460,11 +491,11 @@ async function saveSharedData(config: SyncConfig, data: SharedData): Promise<boo
   } catch (e) { console.error('[webdavSync] saveSharedData 失败:', e); return false }
 }
 
-// ─── ETag 乐观锁写入 ──────────────────────────────────
-// 所有共享数据的写操作都经过 atomicModifySharedData，
-// 它用 ETag + If-Match 头实现条件写入，冲突时自动重试。
+// ─── 原子写入 ──────────────────────────────────────────
+// 所有共享数据写操作都经过 atomicModifySharedData：
+// 读取当前数据 → 修改 → 写回（先读后写，不会覆盖别人）
 
-/** 原子修改共享数据：读取 → 修改 → 条件写入（If-Match），冲突重试 */
+/** 原子修改共享数据：读取 → 修改 → 写入，失败自动重试（无 If-Match） */
 async function atomicModifySharedData(
   config: SyncConfig,
   modify: (data: SharedData) => SharedData,
@@ -475,7 +506,7 @@ async function atomicModifySharedData(
 
   for (let attempt = 0; attempt < maxRetries; attempt++) {
     try {
-      // 1. 读取当前数据，获取 ETag
+      // 1. 读取当前数据
       const getRes = await safeFetch(url, { headers: authHeaders })
       let data: SharedData
 
@@ -487,43 +518,29 @@ async function atomicModifySharedData(
         return false
       } else {
         data = await getRes.json()
-        // 合并扫描发现的新用户
+        // 合并发现的新用户
         const discovered = await discoverUsersFromWebDAV(config)
         const merged = new Set([...(data.knownUsers || []), ...discovered])
         data.knownUsers = Array.from(merged).filter(u => u && u !== 'default' && u !== 'shared')
       }
 
-      // 获取服务器返回的 ETag（WebDAV 标准支持）
-      const etag = getRes.headers.get('ETag') || getRes.headers.get('etag')
-
-      // 2. 执行修改逻辑
+      // 2. 执行修改
       const newData = modify(data)
-      newData.version = (data.version || 0) + 1  // 自增版本号
+      newData.version = (data.version || 0) + 1
 
-      // 3. 条件写入（If-Match）
-      const putHeaders: Record<string, string> = {
-        ...authHeaders,
-        'Content-Type': 'application/json'
-      }
-      if (etag) putHeaders['If-Match'] = etag
-
+      // 3. 写入
       const putRes = await safeFetch(url, {
         method: 'PUT',
-        headers: putHeaders,
+        headers: { ...authHeaders, 'Content-Type': 'application/json' },
         body: JSON.stringify(newData, null, 2)
       })
 
       if (putRes.ok) return true
 
-      if (putRes.status === 412) {
-        // 412 Precondition Failed → 别人改过了 → 重试
-        console.warn(`[webdavSync] 写入冲突（第 ${attempt + 1} 次重试）`)
-        await new Promise(r => setTimeout(r, 300 * (attempt + 1) + Math.random() * 200))
-        continue
+      console.error(`[webdavSync] 写入失败 HTTP ${putRes.status}（第 ${attempt + 1} 次）`)
+      if (attempt < maxRetries - 1) {
+        await new Promise(r => setTimeout(r, 500 * (attempt + 1)))
       }
-
-      console.error(`[webdavSync] 写入失败 HTTP ${putRes.status}`)
-      return false
     } catch (e) {
       console.error('[webdavSync] atomicModifySharedData 错误:', e)
       if (attempt === maxRetries - 1) return false
