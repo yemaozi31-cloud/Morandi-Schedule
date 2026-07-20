@@ -450,7 +450,7 @@ export async function discoverUsersFromWebDAV(config: SyncConfig): Promise<strin
     }).filter(Boolean)
     // 过滤掉 'default'（昵称为空时的兜底值）和 'shared'
     return [...new Set(users)].filter(u => u !== 'default' && u !== 'shared')
-  } catch { return [] }
+  } catch (e) { console.warn('[webdavSync] 发现用户失败:', e); return [] }
 }
 
 /** 获取完整共享数据（自动发现所有用户） */

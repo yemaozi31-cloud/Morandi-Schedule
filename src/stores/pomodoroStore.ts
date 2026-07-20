@@ -77,7 +77,7 @@ export const usePomodoroStore = defineStore('pomodoro', () => {
         taskId: currentTaskId.value,
         isPaused: true
       }))
-    } catch { /* ignore */ }
+    } catch (e) { console.warn('[pomodoro] 暂停保存失败:', e) }
   }
 
   function resumeTimer() {
@@ -162,11 +162,11 @@ export const usePomodoroStore = defineStore('pomodoro', () => {
         isBreak: isBreak.value,
         taskId: currentTaskId.value
       }))
-    } catch { /* quota exceeded - ignore */ }
+    } catch (e) { console.warn('[pomodoro] 保存番茄钟失败（可能超出配额）:', e) }
   }
 
   function clearTimerState() {
-    try { localStorage.removeItem(TIMER_STORAGE_KEY) } catch { /* ignore */ }
+    try { localStorage.removeItem(TIMER_STORAGE_KEY) } catch (e) { console.warn('[pomodoro] 清除计时器状态失败:', e) }
   }
 
   // 页面加载时检查是否有未完成的计时
@@ -195,7 +195,7 @@ export const usePomodoroStore = defineStore('pomodoro', () => {
       } else {
         clearTimerState()
       }
-    } catch { /* invalid data - ignore */ }
+    } catch (e) { console.warn('[pomodoro] 加载计时器状态失败（数据损坏）:', e) }
   }
 
   return {

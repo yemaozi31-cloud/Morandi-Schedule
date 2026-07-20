@@ -34,6 +34,7 @@ export const useHabitStore = defineStore('habits', () => {
     try {
       const data = await db.getAll<HabitCheckIn>('habitCheckIns')
       checkIns.value = new Map(data.map(c => [c.id, c]))
+      await purgeOldDeletedCheckIns()
     } catch (e) {
       console.error('加载打卡记录失败:', e)
     }
@@ -155,10 +156,33 @@ export const useHabitStore = defineStore('habits', () => {
         await db.set('habitCheckIns', updated)
         triggerAutoSync()
         checkIns.value.set(existing.id, updated)
+        await purgeOldDeletedCheckIns()
       }
     } catch (e) {
       console.error('删除打卡失败:', e)
       throw e
+    }
+  }
+
+  /** 清理超过 30 天的软删除打卡记录 */
+  async function purgeOldDeletedCheckIns() {
+    try {
+      const cutoff = new Date(Date.now() - 30 * 24 * 60 * 60 * 1000).toISOString()
+      const toDelete: string[] = []
+      checkIns.value.forEach((c, id) => {
+        if (c.deletedAt && c.deletedAt < cutoff) {
+          toDelete.push(id)
+        }
+      })
+      for (const id of toDelete) {
+        await db.remove('habitCheckIns', id)
+        checkIns.value.delete(id)
+      }
+      if (toDelete.length > 0) {
+        console.log(`[habitStore] 清理 ${toDelete.length} 条过期打卡记录`)
+      }
+    } catch (e) {
+      console.error('[habitStore] 清理过期打卡失败:', e)
     }
   }
 

@@ -405,8 +405,8 @@ export const useTaskStore = defineStore('tasks', () => {
         timeMs: triggerMs, title: task.title,
         body: task.dueDate + (task.dueTime ? ' ' + task.dueTime : ''),
         id: Math.abs(Array.from(task.id).reduce((h, c) => ((h << 5) - h) + c.charCodeAt(0), 0)) % 100000
-      }).catch(() => {})
-    } catch {}
+      }).catch((e) => { console.warn('[taskStore] 设置提醒失败:', e) })
+    } catch (e) { console.warn('[taskStore] 动态导入提醒插件失败:', e) }
   }
 
   function cancelAndroidReminder(taskId: string) {
@@ -414,9 +414,9 @@ export const useTaskStore = defineStore('tasks', () => {
     try {
       import('@tauri-apps/api/core').then(({ invoke }) => {
         const id = Math.abs(Array.from(taskId).reduce((h, c) => ((h << 5) - h) + c.charCodeAt(0), 0)) % 100000
-        invoke('plugin:morandi-plugin|cancelReminder', { id }).catch(() => {})
+        invoke('plugin:morandi-plugin|cancelReminder', { id }).catch((e) => { console.warn('[taskStore] 取消提醒失败:', e) })
       })
-    } catch {}
+    } catch (e) { console.warn('[taskStore] 动态导入core失败:', e) }
   }
 
   return {

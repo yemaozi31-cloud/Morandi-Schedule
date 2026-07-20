@@ -40,10 +40,10 @@ export function startBackgroundPolling(): void {
       const config = settingsStore.syncConfig
       if (!config.webdavUrl || !config.autoSync) return
       // 后台轮询：先推送本地数据，再拉取远程变更合并
-      await pushToWebDAV(config).catch(() => {})
-      await pullFromWebDAV(config).catch(() => {})
+      await pushToWebDAV(config).catch((e) => { console.warn('[AutoSync] 推送失败:', e) })
+      await pullFromWebDAV(config).catch((e) => { console.warn('[AutoSync] 拉取失败:', e) })
       console.log('[AutoSync] 后台轮询完成')
-    } catch {}
+    } catch (e) { console.warn('[AutoSync] 轮询异常:', e) }
   }, POLL_INTERVAL)
   console.log(`[AutoSync] 后台轮询已启动，间隔 ${POLL_INTERVAL / 1000}s`)
 }
