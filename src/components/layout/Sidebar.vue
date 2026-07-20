@@ -56,6 +56,14 @@
           <span class="nav-label">{{ item.label }}</span>
         </router-link>
       </div>
+
+      <!-- 同步按钮 -->
+      <div class="nav-section">
+        <button class="nav-item sync-btn" :disabled="syncing" @click="handleSync">
+          <Icon :name="'refresh'" :size="17" :class="{ spinning: syncing }" />
+          <span class="nav-label">{{ syncing ? '同步中...' : '同步' }}</span>
+        </button>
+      </div>
     </nav>
 
     <div class="sidebar-footer">
@@ -67,9 +75,10 @@
 </template>
 
 <script setup lang="ts">
-import { computed } from 'vue'
+import { computed, ref } from 'vue'
 import { useUiStore } from '@/stores/uiStore'
 import { useSettingsStore } from '@/stores/settingsStore'
+import { sync } from '@/services/webdavSync'
 import { NAV_ITEMS } from '@/utils/constants'
 import Icon from '@/components/common/Icon.vue'
 
@@ -78,6 +87,8 @@ const settingsStore = useSettingsStore()
 
 const activeNav = computed(() => uiStore.activeNav)
 const isDark = computed(() => settingsStore.themeMode === 'dark')
+
+const syncing = ref(false)
 
 const primaryItems = computed(() => NAV_ITEMS.filter(i => i.section === 'primary'))
 const secondaryItems = computed(() => NAV_ITEMS.filter(i => i.section === 'secondary'))
@@ -93,6 +104,23 @@ function toggleTheme() {
 
 function openNewTask() {
   uiStore.openNewTaskForm()
+}
+
+async function handleSync() {
+  if (syncing.value) return
+  syncing.value = true
+  try {
+    const result = await sync(settingsStore.syncConfig)
+    if (result.ok) {
+      window.__message?.success('同步完成')
+    } else {
+      window.__message?.error(result.message)
+    }
+  } catch {
+    window.__message?.error('同步失败')
+  } finally {
+    syncing.value = false
+  }
 }
 </script>
 
@@ -215,5 +243,29 @@ function openNewTask() {
 .theme-btn:hover {
   color: var(--color-text);
   background: var(--color-surface-hover);
+}
+
+/* 同步按钮 */
+.sync-btn {
+  width: 100%;
+  font-family: inherit;
+  font-size: inherit;
+  cursor: pointer;
+  background: none;
+  text-align: left;
+}
+
+.sync-btn:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+/* 旋转动画 */
+.spinning {
+  animation: spin 1s linear infinite;
+}
+
+@keyframes spin {
+  to { transform: rotate(360deg); }
 }
 </style>

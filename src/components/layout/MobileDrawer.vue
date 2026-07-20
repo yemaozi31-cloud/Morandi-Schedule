@@ -25,6 +25,13 @@
                   <span class="drawer-item-label">{{ item.label }}</span>
                 </router-link>
               </div>
+              <!-- 同步按钮 -->
+              <div class="drawer-group" v-if="visible">
+                <button class="drawer-item sync-btn" :disabled="syncing" @click="handleSync">
+                  <Icon :name="'refresh'" :size="18" class="drawer-item-icon" :class="{ spinning: syncing }" />
+                  <span class="drawer-item-label">{{ syncing ? '同步中...' : '同步' }}</span>
+                </button>
+              </div>
             </nav>
           </div>
         </transition>
@@ -34,21 +41,42 @@
 </template>
 
 <script setup lang="ts">
-import { computed } from 'vue'
+import { computed, ref } from 'vue'
 import { NAV_ITEMS } from '@/utils/constants'
 import { useUiStore } from '@/stores/uiStore'
+import { useSettingsStore } from '@/stores/settingsStore'
+import { sync } from '@/services/webdavSync'
 import Icon from '@/components/common/Icon.vue'
 
 defineProps<{
   visible: boolean
 }>()
 
-defineEmits<{
+const emit = defineEmits<{
   (e: 'close'): void
 }>()
 
 const uiStore = useUiStore()
+const settingsStore = useSettingsStore()
 const activeNav = computed(() => uiStore.activeNav)
+const syncing = ref(false)
+
+async function handleSync() {
+  if (syncing.value) return
+  syncing.value = true
+  try {
+    const result = await sync(settingsStore.syncConfig)
+    if (result.ok) {
+      window.__message?.success('同步完成')
+    } else {
+      window.__message?.error(result.message)
+    }
+  } catch {
+    window.__message?.error('同步失败')
+  } finally {
+    syncing.value = false
+  }
+}
 
 const navGroups = computed(() => {
   const groups: { label: string; items: typeof NAV_ITEMS }[] = []
@@ -199,5 +227,29 @@ const navGroups = computed(() => {
 .drawer-slide-enter-from,
 .drawer-slide-leave-to {
   transform: translateX(100%);
+}
+
+/* 同步按钮 */
+.sync-btn {
+  width: 100%;
+  font-family: inherit;
+  font-size: inherit;
+  cursor: pointer;
+  background: none;
+  text-align: left;
+  border: none;
+}
+
+.sync-btn:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+.spinning {
+  animation: spin 1s linear infinite;
+}
+
+@keyframes spin {
+  to { transform: rotate(360deg); }
 }
 </style>
