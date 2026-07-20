@@ -12,6 +12,7 @@ html {
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
   background: var(--color-bg);
+  transition: background var(--transition-normal);
 }
 
 body {
@@ -21,6 +22,23 @@ body {
   line-height: 1.6;
   overflow: hidden;
   height: 100vh;
+  transition: background-color var(--transition-normal), color var(--transition-normal);
+}
+
+/* 主题切换过渡（仅作用于顶层容器，避免影响按钮 hover 等交互动画） */
+.app-layout,
+.sidebar,
+.main-content,
+.nav-item,
+.action-group,
+.about-card,
+.theme-preview,
+.data-manager,
+.form-input,
+.action-btn,
+.toggle-slider,
+.mobile-nav {
+  transition: background-color var(--transition-normal), border-color var(--transition-normal);
 }
 
 #app {
