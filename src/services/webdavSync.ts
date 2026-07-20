@@ -184,7 +184,7 @@ function releasePushLock(): void {
 export async function pushToWebDAV(config: SyncConfig): Promise<SyncResult> {
   await acquirePushLock()
   try {
-    // 1. 读取本地全量数据（过滤已软删除的任务）
+    // 1. 读取本地全量数据
     const allTasks = await db.getAll<any>("tasks")
     const tasks = allTasks.filter((t: any) => !t.deletedAt)
     const [tags, habits, habitCheckIns, pomodoroSessions] = await Promise.all([
@@ -193,43 +193,95 @@ export async function pushToWebDAV(config: SyncConfig): Promise<SyncResult> {
       db.getAll<any>("habitCheckIns"),
       db.getAll<any>("pomodoroSessions")
     ])
+    const localData = { tasks, tags, habits, habitCheckIns, pomodoroSessions }
 
-    // 2. 打包为同步格式
-    const now = new Date().toISOString()
-    const syncData: SyncDataPackage = {
-      version: SYNC_DATA_VERSION,
-      deviceId: getDeviceId(),
-      lastSyncAt: now,
-      data: { tasks, tags, habits, habitCheckIns, pomodoroSessions }
-    }
-
-    // 3. 如果有私有密钥，加密整个数据包
-    let body = JSON.stringify(syncData, null, 2)
-    if (config.privateKey) {
-      body = await encryptSyncData(body, config.privateKey)
-    }
-
-    // 4. PUT 上传到 WebDAV
     const url = syncFileUrl(config)
-    const res = await safeFetch(url, {
-      method: 'PUT',
-      headers: {
-        ...authHeader(config.webdavUsername, config.webdavPassword),
+    const auth = authHeader(config.webdavUsername, config.webdavPassword)
+
+    // 2. 重试循环：先合并云端再写入，冲突自动重试
+    for (let attempt = 0; attempt < 3; attempt++) {
+      // 2a. GET 云端现有数据
+      const getRes = await safeFetch(url, { headers: auth })
+      let cloudData: SyncDataPackage | null = null
+      let etag: string | null = null
+
+      if (getRes.ok) {
+        let text = await getRes.text()
+        etag = getRes.headers.get('ETag') || getRes.headers.get('etag')
+        if (config.privateKey && text.startsWith('$aes$')) {
+          const decrypted = await decryptSyncData(text, config.privateKey)
+          if (decrypted) text = decrypted
+        }
+        try { cloudData = JSON.parse(text) } catch { /* 云端数据损坏或为空 */ }
+      }
+      // 404 表示首次同步，cloudData 保持 null
+
+      // 2b. 逐 store 合并：本地 + 云端，按 updatedAt 取新
+      const merged: SyncDataPackage = {
+        version: SYNC_DATA_VERSION,
+        deviceId: getDeviceId(),
+        lastSyncAt: new Date().toISOString(),
+        data: { tasks: [], tags: [], habits: [], habitCheckIns: [], pomodoroSessions: [] }
+      }
+
+      for (const storeName of SYNC_STORE_NAMES) {
+        const localItems = (localData as any)[storeName] || []
+        const cloudItems = (cloudData?.data as any)?.[storeName] || []
+        const itemMap = new Map<string, any>()
+
+        // 先全部放入本地条目
+        for (const item of localItems) {
+          if (item.id) itemMap.set(item.id, item)
+        }
+        // 云端有但本地没有或云端更新的 → 保留
+        for (const item of cloudItems) {
+          if (!item.id) continue
+          const existing = itemMap.get(item.id)
+          if (!existing || isNewer(item, existing)) {
+            itemMap.set(item.id, item)
+          }
+        }
+
+        (merged.data as any)[storeName] = Array.from(itemMap.values())
+      }
+
+      // 2c. 序列化 + 加密
+      let body = JSON.stringify(merged, null, 2)
+      if (config.privateKey) {
+        body = await encryptSyncData(body, config.privateKey)
+      }
+
+      // 2d. 条件写入（If-Match）
+      const putHeaders: Record<string, string> = {
+        ...auth,
         'Content-Type': 'application/json'
-      },
-      body
-    })
+      }
+      if (etag) putHeaders['If-Match'] = etag
 
-    if (!res.ok) {
-      const text = await res.text().catch(() => '')
-      return { ok: false, message: `上传失败（HTTP ${res.status}）${text ? ': ' + text.slice(0, 100) : ''}` }
+      const putRes = await safeFetch(url, {
+        method: 'PUT',
+        headers: putHeaders,
+        body
+      })
+
+      if (putRes.status === 412) {
+        // 被其他人改了 → 重新合并重试
+        console.warn(`[webdavSync] 推送冲突，第 ${attempt + 1} 次重试`)
+        continue
+      }
+      if (!putRes.ok) {
+        const text = await putRes.text().catch(() => '')
+        return { ok: false, message: `上传失败（HTTP ${putRes.status}）${text ? ': ' + text.slice(0, 100) : ''}` }
+      }
+
+      return {
+        ok: true,
+        message: `已上传 ${tasks.length} 任务 · ${tags.length} 标签 · ${habits.length} 习惯 · ${habitCheckIns.length} 打卡 · ${pomodoroSessions.length} 番茄钟`,
+        stats: { uploaded: tasks.length + tags.length + habits.length + habitCheckIns.length + pomodoroSessions.length }
+      }
     }
 
-    return {
-      ok: true,
-      message: `已上传 ${tasks.length} 任务 · ${tags.length} 标签 · ${habits.length} 习惯 · ${habitCheckIns.length} 打卡 · ${pomodoroSessions.length} 番茄钟`,
-      stats: { uploaded: tasks.length + tags.length + habits.length + habitCheckIns.length + pomodoroSessions.length }
-    }
+    return { ok: false, message: '同步冲突超过 3 次，请稍后重试' }
   } catch (e: any) {
     return { ok: false, message: `上传出错：${e.message || e}` }
   } finally {
