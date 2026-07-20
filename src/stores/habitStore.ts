@@ -101,7 +101,15 @@ export const useHabitStore = defineStore('habits', () => {
         .find(c => c.habitId === habitId && c.date === today)
 
       if (existing) {
-        const updated = { ...existing, value: existing.value + value, note: note || existing.note }
+        if (existing.deletedAt) {
+          // 之前取消过，重新打卡：清除 deletedAt，重置 value
+          const updated = { ...existing, value, deletedAt: null, updatedAt: now, note: note || existing.note }
+          await db.set('habitCheckIns', updated)
+          triggerAutoSync()
+          checkIns.value.set(updated.id, updated)
+          return updated
+        }
+        const updated = { ...existing, value: existing.value + value, updatedAt: now, note: note || existing.note }
         await db.set('habitCheckIns', updated)
               triggerAutoSync()
         checkIns.value.set(updated.id, updated)
