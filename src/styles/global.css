@@ -5,8 +5,6 @@
   margin: 0;
   padding: 0;
   -webkit-tap-highlight-color: transparent;
-  /* 主题切换过渡 — 全局统一，避免部分元素跳变 */
-  transition: background-color var(--transition-normal), border-color var(--transition-normal);
 }
 
 html {
