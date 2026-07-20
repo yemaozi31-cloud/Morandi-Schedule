@@ -273,7 +273,7 @@ async function handleDelete() {
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
-  font-size: var(--font-size-sm);
+  font-size: var(--font-size-md);
   color: var(--color-text);
   font-weight: 500;
 }
@@ -513,12 +513,7 @@ async function handleDelete() {
     min-height: 24px;
   }
   .compact-streak {
-    font-size: 10px;
-    gap: 1px;
-  }
-  .compact-streak .compact-dot {
-    width: 8px;
-    height: 8px;
+    display: none;
   }
 }
 </style>
