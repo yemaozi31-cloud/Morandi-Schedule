@@ -290,7 +290,17 @@ async function handleToggle(taskId: string) {
 // handleDelete / onDeleteConfirmed 由 useDeleteTask composable 提供
 
 async function onHabitChecked(habitId: string) {
-  // HabitCard 内部已处理打卡/取消，此处不需要额外操作
+  // 打卡/取消后刷新共享打卡状态，让 badge 数字及时更新
+  if (habitId.startsWith('shared-')) {
+    try {
+      const cfg = settingsStore.syncConfig
+      const checkIns = await fetchSharedCheckIns(cfg)
+      const nick = cfg.nickname
+      sharedTodayChecked.value = new Set(
+        checkIns.filter(c => c.nick === nick).map(c => c.date)
+      )
+    } catch { /* 静默失败，下次轮询自动更新 */ }
+  }
 }
 
 async function handleSave(data: any) {
