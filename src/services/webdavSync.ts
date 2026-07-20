@@ -244,28 +244,39 @@ export async function pushToWebDAV(config: SyncConfig): Promise<SyncResult> {
     merged.data.habits = merged.data.habits.filter((h: any) => !h.deletedAt)
     merged.data.habitCheckIns = merged.data.habitCheckIns.filter((c: any) => !c.deletedAt)
 
-    // 4. 序列化 + 加密 + 写入
+    // 4. 序列化 + 加密 + 写入（含 503 重试）
     let body = JSON.stringify(merged, null, 2)
     if (config.privateKey) {
       body = await encryptSyncData(body, config.privateKey)
     }
 
-    const res = await safeFetch(url, {
-      method: 'PUT',
-      headers: { ...auth, 'Content-Type': 'application/json' },
-      body
-    })
+    let lastErr = ''
+    for (let attempt = 0; attempt < 3; attempt++) {
+      const res = await safeFetch(url, {
+        method: 'PUT',
+        headers: { ...auth, 'Content-Type': 'application/json' },
+        body
+      })
 
-    if (!res.ok) {
+      if (res.ok) {
+        return {
+          ok: true,
+          message: `已上传 ${tasks.length} 任务 · ${tags.length} 标签 · ${habits.length} 习惯 · ${habitCheckIns.length} 打卡 · ${pomodoroSessions.length} 番茄钟`,
+          stats: { uploaded: tasks.length + tags.length + habits.length + habitCheckIns.length + pomodoroSessions.length }
+        }
+      }
+
+      if (res.status === 503) {
+        lastErr = `服务器暂时不可用（第 ${attempt + 1} 次重试）`
+        await new Promise(r => setTimeout(r, 1000 * (attempt + 1)))
+        continue
+      }
+
       const text = await res.text().catch(() => '')
       return { ok: false, message: `上传失败（HTTP ${res.status}）${text ? ': ' + text.slice(0, 100) : ''}` }
     }
 
-    return {
-      ok: true,
-      message: `已上传 ${tasks.length} 任务 · ${tags.length} 标签 · ${habits.length} 习惯 · ${habitCheckIns.length} 打卡 · ${pomodoroSessions.length} 番茄钟`,
-      stats: { uploaded: tasks.length + tags.length + habits.length + habitCheckIns.length + pomodoroSessions.length }
-    }
+    return { ok: false, message: `上传失败：${lastErr || '多次重试后仍失败'}` }
   } catch (e: any) {
     return { ok: false, message: `上传出错：${e.message || e}` }
   } finally {
