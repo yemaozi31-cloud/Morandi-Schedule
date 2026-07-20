@@ -184,16 +184,14 @@ function releasePushLock(): void {
 export async function pushToWebDAV(config: SyncConfig): Promise<SyncResult> {
   await acquirePushLock()
   try {
-    // 1. 读取本地全量数据
-    const allTasks = await db.getAll<any>("tasks")
-    const tasks = allTasks.filter((t: any) => !t.deletedAt)
+    // 1. 读取本地全量数据（任务/打卡不过滤 deletedAt，先全量合并让本地已删版本覆盖云端）
+    const tasks = await db.getAll<any>("tasks")
     const [tags, habits, habitCheckIns, pomodoroSessions] = await Promise.all([
       db.getAll<any>("tags"),
       db.getAll<any>("habits"),
       db.getAll<any>("habitCheckIns"),
       db.getAll<any>("pomodoroSessions")
     ])
-    // 打卡记录不过滤 deletedAt（先全部放进合并，让本地已删版本覆盖云端旧版本）
     const localData = { tasks, tags, habits, habitCheckIns, pomodoroSessions }
 
     const url = syncFileUrl(config)
@@ -241,6 +239,7 @@ export async function pushToWebDAV(config: SyncConfig): Promise<SyncResult> {
     }
 
     // 合并完成后过滤已软删除的记录（已删的被本地版本覆盖到云端，再从输出中去掉）
+    merged.data.tasks = merged.data.tasks.filter((t: any) => !t.deletedAt)
     merged.data.habits = merged.data.habits.filter((h: any) => !h.deletedAt)
     merged.data.habitCheckIns = merged.data.habitCheckIns.filter((c: any) => !c.deletedAt)
 
