@@ -333,7 +333,9 @@ onMounted(() => {
 .section-title {
   font-size: var(--font-size-lg);
   color: var(--color-text);
-  margin-bottom: var(--spacing-md);
+  padding: var(--spacing-md) var(--spacing-lg);
+  margin: 0;
+  border-bottom: 1px solid var(--color-border-light);
 }
 
 /* ── 表单行 ──────────────────────────────────────────── */
@@ -342,6 +344,7 @@ onMounted(() => {
   border-radius: var(--radius-lg);
   border: 1px solid var(--color-border-light);
   overflow: hidden;
+  box-shadow: 0 1px 3px var(--color-shadow);
 }
 
 .form-row {
@@ -360,17 +363,19 @@ onMounted(() => {
   min-width: 120px;
   display: flex;
   flex-direction: column;
-  gap: 2px;
+  gap: var(--spacing-xs);
 }
 
 .form-label {
   font-size: var(--font-size-md);
   color: var(--color-text);
+  font-weight: 500;
 }
 
 .form-desc {
   font-size: var(--font-size-sm);
   color: var(--color-text-muted);
+  line-height: 1.4;
 }
 
 .form-desc code {
@@ -384,18 +389,19 @@ onMounted(() => {
 .form-input {
   flex: 0 1 280px;
   min-width: 160px;
-  padding: var(--spacing-xs) var(--spacing-sm);
+  padding: var(--spacing-sm) var(--spacing-sm);
   border: 1px solid var(--color-border);
   border-radius: var(--radius-md);
   background: var(--color-bg);
   color: var(--color-text);
   font-size: var(--font-size-sm);
   outline: none;
-  transition: border-color 0.2s;
+  transition: border-color 0.2s, box-shadow 0.2s;
 }
 
 .form-input:focus {
   border-color: var(--color-primary);
+  box-shadow: 0 0 0 2px color-mix(in srgb, var(--color-primary) 15%, transparent);
 }
 
 .form-input::placeholder {

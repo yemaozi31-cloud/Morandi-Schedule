@@ -303,7 +303,7 @@ function handleLogout() {
 .settings-sections {
   display: flex;
   flex-direction: column;
-  gap: var(--spacing-xl);
+  gap: var(--spacing-lg);
 }
 
 .settings-section {
@@ -314,7 +314,9 @@ function handleLogout() {
 .section-title {
   font-size: var(--font-size-lg);
   color: var(--color-text);
-  margin-bottom: var(--spacing-md);
+  padding: var(--spacing-md) var(--spacing-lg);
+  margin: 0;
+  border-bottom: 1px solid var(--color-border-light);
 }
 
 .about-card {
@@ -322,6 +324,7 @@ function handleLogout() {
   border-radius: var(--radius-lg);
   border: 1px solid var(--color-border-light);
   padding: var(--spacing-lg);
+  box-shadow: 0 1px 3px var(--color-shadow);
 }
 
 .about-content {
@@ -343,6 +346,14 @@ function handleLogout() {
   color: var(--color-text-secondary);
 }
 
+:deep(.action-group) {
+  background: var(--color-surface);
+  border-radius: var(--radius-lg);
+  border: 1px solid var(--color-border-light);
+  overflow: hidden;
+  box-shadow: 0 1px 3px var(--color-shadow);
+}
+
 .action-row {
   display: flex;
   align-items: center;
@@ -353,9 +364,14 @@ function handleLogout() {
 
 .action-row:last-child { border-bottom: none; }
 
-.action-info { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 2px; }
-.action-label { font-size: var(--font-size-md); color: var(--color-text); }
-.action-desc { font-size: var(--font-size-sm); color: var(--color-text-muted); }
+.action-row.danger {
+  background: color-mix(in srgb, var(--color-danger) 5%, transparent);
+  border-top-color: color-mix(in srgb, var(--color-danger) 20%, var(--color-border-light));
+}
+
+.action-info { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: var(--spacing-xs); }
+.action-label { font-size: var(--font-size-md); color: var(--color-text); font-weight: 500; }
+.action-desc { font-size: var(--font-size-sm); color: var(--color-text-muted); line-height: 1.4; }
 
 .action-btn {
   padding: var(--spacing-xs) var(--spacing-lg);
@@ -366,11 +382,26 @@ function handleLogout() {
   background: transparent;
   cursor: pointer;
   white-space: nowrap;
+  transition: all 0.2s ease;
+  flex-shrink: 0;
+}
+
+.action-btn:hover:not(:disabled) {
+  background: color-mix(in srgb, var(--color-primary) 10%, transparent);
+}
+
+.action-btn:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
 }
 
 .danger-btn {
   color: var(--color-danger) !important;
   border-color: var(--color-danger) !important;
+}
+
+.danger-btn:hover:not(:disabled) {
+  background: color-mix(in srgb, var(--color-danger) 10%, transparent) !important;
 }
 
 .about-value {

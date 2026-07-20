@@ -177,7 +177,9 @@ async function handleClear() {
 .section-title {
   font-size: var(--font-size-lg);
   color: var(--color-text);
-  margin-bottom: var(--spacing-md);
+  padding: var(--spacing-md) var(--spacing-lg);
+  margin: 0;
+  border-bottom: 1px solid var(--color-border-light);
 }
 
 .action-group {
@@ -185,6 +187,15 @@ async function handleClear() {
   border-radius: var(--radius-lg);
   border: 1px solid var(--color-border-light);
   overflow: hidden;
+  box-shadow: 0 1px 3px var(--color-shadow);
+}
+
+.data-manager {
+  background: var(--color-surface);
+  border-radius: var(--radius-lg);
+  border: 1px solid var(--color-border-light);
+  overflow: hidden;
+  box-shadow: 0 1px 3px var(--color-shadow);
 }
 
 .action-row {

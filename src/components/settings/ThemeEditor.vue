@@ -42,7 +42,9 @@ const swatches = computed(() => [
 .section-title {
   font-size: var(--font-size-lg);
   color: var(--color-text);
-  margin-bottom: var(--spacing-md);
+  padding: var(--spacing-md) var(--spacing-lg);
+  margin: 0;
+  border-bottom: 1px solid var(--color-border-light);
 }
 
 .theme-preview {
@@ -50,6 +52,7 @@ const swatches = computed(() => [
   border-radius: var(--radius-lg);
   border: 1px solid var(--color-border-light);
   overflow: hidden;
+  box-shadow: 0 1px 3px var(--color-shadow);
 }
 
 .preview-header {
@@ -60,6 +63,7 @@ const swatches = computed(() => [
   background: var(--color-bg);
   font-size: var(--font-size-md);
   color: var(--color-text);
+  border-bottom: 1px solid var(--color-border-light);
 }
 
 .toggle-btn {
