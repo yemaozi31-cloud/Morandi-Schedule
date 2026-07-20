@@ -703,3 +703,42 @@ export function getTeamHeatmap(
       .map(c => c.date)
   }))
 }
+
+/** 彻底删除账号：退出共享习惯 + 删除云端文件 + 清空本地 */
+export async function deleteAccount(config: SyncConfig): Promise<SyncResult> {
+  try {
+    // 1. 从所有共享习惯中退出
+    const sharedData = await fetchSharedData(config)
+    const nick = config.nickname
+    if (nick) {
+      const myHabits = sharedData.habits.filter(h => h.members.includes(nick) || h.invitees.includes(nick))
+      for (const habit of myHabits) {
+        if (habit.members.includes(nick)) {
+          await leaveSharedHabit(config, habit.name, nick)
+        } else if (habit.invitees.includes(nick)) {
+          await ignoreSharedHabitInvite(config, habit.name, nick)
+        }
+      }
+    }
+
+    // 2. 删除个人同步文件
+    const url = syncFileUrl(config)
+    const authH = authHeader(config.webdavUsername, config.webdavPassword)
+    const delRes = await safeFetch(url, { method: 'DELETE', headers: authH })
+
+    if (delRes.status === 405 || delRes.status === 501) {
+      // 服务器不支持 DELETE → 用空对象覆盖
+      await safeFetch(url, {
+        method: 'PUT',
+        headers: { ...authH, 'Content-Type': 'application/json' },
+        body: '{}'
+      })
+    } else if (!delRes.ok && delRes.status !== 404) {
+      return { ok: false, message: `删除云端文件失败（HTTP ${delRes.status}）` }
+    }
+
+    return { ok: true, message: '账号数据已全部清除' }
+  } catch (e: any) {
+    return { ok: false, message: `删除失败：${e.message || e}` }
+  }
+}

@@ -75,6 +75,15 @@
               </div>
               <button class="action-btn danger-btn" @click="handleLogout">退出</button>
             </div>
+            <div class="action-row danger" style="border-top: 1px solid var(--color-danger);">
+              <div class="action-info">
+                <span class="action-label">删除账号</span>
+                <span class="action-desc">清除本地数据 + 云端文件，不可恢复</span>
+              </div>
+              <button class="action-btn danger-btn" :disabled="deletingAccount" @click="handleDeleteAccount">
+                {{ deletingAccount ? '删除中…' : '删除' }}
+              </button>
+            </div>
           </div>
         </section>
         <section class="settings-section">
@@ -118,6 +127,7 @@ import DataManager from '@/components/settings/DataManager.vue'
 import MobileBackLink from '@/components/common/MobileBackLink.vue'
 import { fetch as tauriFetch } from '@tauri-apps/plugin-http'
 import { encryptSyncData, decryptSyncData } from '@/utils/crypto'
+import { deleteAccount } from '@/services/webdavSync'
 import { version as pkgVersion } from '../../package.json'
 
 const appVersion = pkgVersion
@@ -275,6 +285,41 @@ async function handleDeleteCourses() {
   } catch (e) {
     console.error('删除课表失败:', e)
     window.__message?.error('删除失败')
+  }
+}
+
+const deletingAccount = ref(false)
+
+async function handleDeleteAccount() {
+  const ok = await showConfirm({
+    title: '删除账号',
+    content: '确认删除所有数据？此操作不可恢复！\n\n将清除：\n• 本地所有数据（任务、习惯、打卡）\n• 云端同步文件\n• 共享习惯中的记录\n\n其他设备登录此账号也不会恢复任何数据。'
+  })
+  if (!ok) return
+  deletingAccount.value = true
+  try {
+    const result = await deleteAccount(settingsStore.syncConfig)
+    if (!result.ok) {
+      window.__message?.error(result.message)
+      deletingAccount.value = false
+      return
+    }
+    // 清空本地数据
+    const { clear } = await import('@/db')
+    for (const store of ['tasks', 'tags', 'habits', 'habitCheckIns', 'pomodoroSessions', 'settings']) {
+      await clear(store)
+    }
+    // 退出登录
+    localStorage.removeItem('morandi_logged_in')
+    localStorage.removeItem('last_page')
+    settingsStore.syncConfig.nickname = ''
+    settingsStore.syncConfig.privateKey = ''
+    await settingsStore.saveSyncConfig()
+    window.__message?.success('账号已彻底删除')
+    router.push('/login')
+  } catch (e) {
+    window.__message?.error('删除失败')
+    deletingAccount.value = false
   }
 }
 
