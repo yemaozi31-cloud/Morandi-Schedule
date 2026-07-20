@@ -346,6 +346,15 @@ function handleLogout() {
   color: var(--color-text-secondary);
 }
 
+/* 内联卡片（课表导入、账号等直接写在 SettingsView 模板中的 .action-group） */
+.action-group {
+  background: var(--color-surface);
+  border-radius: var(--radius-lg);
+  border: 1px solid var(--color-border-light);
+  overflow: hidden;
+  box-shadow: 0 1px 3px var(--color-shadow);
+}
+
 .action-row {
   display: flex;
   align-items: center;
