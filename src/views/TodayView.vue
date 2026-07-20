@@ -116,7 +116,7 @@ import { useTagStore } from '@/stores/tagStore'
 import { usePomodoroStore } from '@/stores/pomodoroStore'
 import { useHabitStore } from '@/stores/habitStore'
 import { useSettingsStore } from '@/stores/settingsStore'
-import { fetchSharedData } from '@/services/webdavSync'
+import { fetchSharedData, pullFromWebDAV } from '@/services/webdavSync'
 import type { Task } from '@/types'
 import { nlpParse } from '@/utils/nlpParser'
 import { getTodayStr } from '@/utils/date'
@@ -202,6 +202,9 @@ const overdueTasks = computed(() =>
 )
 
 onMounted(async () => {
+  // 先拉云端覆盖本地
+  try { await pullFromWebDAV(settingsStore.syncConfig) } catch {}
+  // 再从本地加载到内存
   await taskStore.loadTasks()
   await tagStore.loadTags()
   await pomodoroStore.loadSessions()

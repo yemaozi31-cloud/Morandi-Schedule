@@ -27,9 +27,9 @@
               </div>
               <!-- 同步按钮 -->
               <div class="drawer-group" v-if="visible">
-                <button class="drawer-item sync-btn" :disabled="syncing" @click="handleSync">
-                  <Icon :name="'refresh'" :size="18" class="drawer-item-icon" :class="{ spinning: syncing }" />
-                  <span class="drawer-item-label">{{ syncing ? '同步中...' : '同步' }}</span>
+                <button class="drawer-item sync-btn" :disabled="refreshing" @click="handleRefresh">
+                  <Icon :name="'refresh'" :size="18" class="drawer-item-icon" :class="{ spinning: refreshing }" />
+                  <span class="drawer-item-label">{{ refreshing ? '刷新中...' : '刷新' }}</span>
                 </button>
               </div>
             </nav>
@@ -45,7 +45,7 @@ import { computed, ref } from 'vue'
 import { NAV_ITEMS } from '@/utils/constants'
 import { useUiStore } from '@/stores/uiStore'
 import { useSettingsStore } from '@/stores/settingsStore'
-import { sync } from '@/services/webdavSync'
+import { pullFromWebDAV } from '@/services/webdavSync'
 import Icon from '@/components/common/Icon.vue'
 
 defineProps<{
@@ -59,22 +59,28 @@ const emit = defineEmits<{
 const uiStore = useUiStore()
 const settingsStore = useSettingsStore()
 const activeNav = computed(() => uiStore.activeNav)
-const syncing = ref(false)
+const refreshing = ref(false)
 
-async function handleSync() {
-  if (syncing.value) return
-  syncing.value = true
+async function handleRefresh() {
+  if (refreshing.value) return
+  refreshing.value = true
   try {
-    const result = await sync(settingsStore.syncConfig)
-    if (result.ok) {
-      window.__message?.success('同步完成')
-    } else {
+    const result = await pullFromWebDAV(settingsStore.syncConfig)
+    if (!result.ok) {
       window.__message?.error(result.message)
+      return
     }
+    // 拉取成功后重新加载 stores
+    const { useTaskStore } = await import('@/stores/taskStore')
+    const { useHabitStore } = await import('@/stores/habitStore')
+    await useTaskStore().loadTasks()
+    await useHabitStore().loadHabits()
+    await useHabitStore().loadCheckIns()
+    window.__message?.success('刷新完成')
   } catch {
-    window.__message?.error('同步失败')
+    window.__message?.error('刷新失败')
   } finally {
-    syncing.value = false
+    refreshing.value = false
   }
 }
 

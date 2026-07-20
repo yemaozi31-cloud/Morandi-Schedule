@@ -393,6 +393,80 @@ export async function sync(config: SyncConfig): Promise<SyncResult> {
   }
 }
 
+// ─── 个人数据原子写入 ──────────────────────────────────────
+// 每个操作直接 GET → 修改 → PUT 个人同步文件，不经过合并
+// 和 atomicModifySharedData 类似但操作的是 {nick}-sync.json
+
+/** 原子修改个人同步数据：读取 → 修改 → 写入，失败自动重试 */
+export async function atomicModifyPersonalData(
+  config: SyncConfig,
+  modify: (data: SyncDataPackage) => SyncDataPackage,
+  maxRetries = 3
+): Promise<boolean> {
+  const url = syncFileUrl(config)
+  const authHeaders = { Authorization: 'Basic ' + btoa(`${config.webdavUsername}:${config.webdavPassword}`) }
+
+  for (let attempt = 0; attempt < maxRetries; attempt++) {
+    try {
+      // 1. 读取当前云端数据
+      const getRes = await safeFetch(url, { headers: authHeaders })
+      let data: SyncDataPackage
+
+      if (getRes.status === 404) {
+        data = {
+          version: SYNC_DATA_VERSION,
+          deviceId: getDeviceId(),
+          lastSyncAt: new Date().toISOString(),
+          data: { tasks: [], tags: [], habits: [], habitCheckIns: [], pomodoroSessions: [] }
+        }
+      } else if (!getRes.ok) {
+        console.error(`[webdavSync] 读取个人数据失败 HTTP ${getRes.status}`)
+        return false
+      } else {
+        let text = await getRes.text()
+        if (config.privateKey && text.startsWith('$aes$')) {
+          const decrypted = await decryptSyncData(text, config.privateKey)
+          if (decrypted) text = decrypted
+        }
+        data = JSON.parse(text)
+      }
+
+      // 2. 执行修改
+      const newData = modify(data)
+      newData.version = SYNC_DATA_VERSION
+      newData.lastSyncAt = new Date().toISOString()
+
+      // 3. 序列化 + 加密 + 写入
+      let body = JSON.stringify(newData, null, 2)
+      if (config.privateKey) {
+        body = await encryptSyncData(body, config.privateKey)
+      }
+
+      const putRes = await safeFetch(url, {
+        method: 'PUT',
+        headers: { ...authHeaders, 'Content-Type': 'application/json' },
+        body
+      })
+
+      if (putRes.ok) return true
+
+      if (putRes.status === 503) {
+        console.warn(`[webdavSync] 写入冲突 503（第 ${attempt + 1} 次重试）`)
+        await new Promise(r => setTimeout(r, 1000 * (attempt + 1)))
+        continue
+      }
+
+      console.error(`[webdavSync] 写入失败 HTTP ${putRes.status}`)
+      return false
+    } catch (e) {
+      console.error('[webdavSync] atomicModifyPersonalData 错误:', e)
+      if (attempt === maxRetries - 1) return false
+      await new Promise(r => setTimeout(r, 500))
+    }
+  }
+  return false
+}
+
 // ─── 共享打卡 ─────────────────────────────────────────────────
 
 export interface SharedCheckIn {

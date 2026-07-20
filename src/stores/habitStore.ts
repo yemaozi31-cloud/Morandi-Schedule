@@ -1,10 +1,11 @@
 import { defineStore } from 'pinia'
-import { triggerAutoSync } from '@/services/autoSync'
 import { ref, computed } from 'vue'
 import type { Habit, HabitCheckIn } from '@/types'
 import * as db from '@/db'
 import { generateUUID } from '@/utils/uuid'
 import { getTodayStr } from '@/utils/date'
+import { atomicModifyPersonalData } from '@/services/webdavSync'
+import { useSettingsStore } from '@/stores/settingsStore'
 
 export const useHabitStore = defineStore('habits', () => {
   const habits = ref<Map<string, Habit>>(new Map())
@@ -56,8 +57,13 @@ export const useHabitStore = defineStore('habits', () => {
       updatedAt: now
     }
     try {
+      const cfg = useSettingsStore().syncConfig
+      const ok = await atomicModifyPersonalData(cfg, (d) => {
+        d.data.habits.push({ ...habit } as any)
+        return d
+      })
+      if (!ok) throw new Error('云端写入失败')
       await db.set('habits', habit)
-      triggerAutoSync()
       habits.value.set(habit.id, habit)
     } catch (e) {
       console.error('创建习惯失败:', e)
@@ -71,8 +77,13 @@ export const useHabitStore = defineStore('habits', () => {
     if (!existing) return
     const updated: Habit = { ...existing, ...data, id, updatedAt: new Date().toISOString() }
     try {
+      const cfg = useSettingsStore().syncConfig
+      await atomicModifyPersonalData(cfg, (d) => {
+        const idx = d.data.habits.findIndex(h => h.id === id)
+        if (idx >= 0) d.data.habits[idx] = { ...updated } as any
+        return d
+      })
       await db.set('habits', updated)
-      triggerAutoSync()
       habits.value.set(id, updated)
     } catch (e) {
       console.error('更新习惯失败:', e)
@@ -85,12 +96,18 @@ export const useHabitStore = defineStore('habits', () => {
       const existing = habits.value.get(id)
       if (!existing) return
       const now = new Date().toISOString()
-      // 软删除习惯
       const updated: Habit = { ...existing, deletedAt: now, updatedAt: now }
+      // 先写云端
+      const cfg = useSettingsStore().syncConfig
+      await atomicModifyPersonalData(cfg, (d) => {
+        d.data.habits = d.data.habits.filter(h => h.id !== id)
+        d.data.habitCheckIns = d.data.habitCheckIns.filter(c => c.habitId !== id)
+        return d
+      })
+      // 成功后才写本地缓存
       await db.set('habits', updated)
-      triggerAutoSync()
       habits.value.set(id, updated)
-      // 同时软删除关联的打卡记录
+      // 同时本地缓存软删除关联的打卡记录
       const relatedCheckIns = Array.from(checkIns.value.values()).filter(c => c.habitId === id)
       for (const c of relatedCheckIns) {
         const uc = { ...c, deletedAt: now, updatedAt: now }
@@ -109,34 +126,32 @@ export const useHabitStore = defineStore('habits', () => {
     try {
       const existing = Array.from(checkIns.value.values())
         .find(c => c.habitId === habitId && c.date === today)
+      let checkIn: HabitCheckIn
 
       if (existing) {
         if (existing.deletedAt) {
-          // 之前取消过，重新打卡：清除 deletedAt，重置 value
-          const updated = { ...existing, value, deletedAt: null, updatedAt: now, note: note || existing.note }
-          await db.set('habitCheckIns', updated)
-          triggerAutoSync()
-          checkIns.value.set(updated.id, updated)
-          return updated
+          // 之前取消过，重新打卡
+          checkIn = { ...existing, value, deletedAt: null, updatedAt: now, note: note || existing.note }
+        } else {
+          checkIn = { ...existing, value: existing.value + value, updatedAt: now, note: note || existing.note }
         }
-        const updated = { ...existing, value: existing.value + value, updatedAt: now, note: note || existing.note }
-        await db.set('habitCheckIns', updated)
-              triggerAutoSync()
-        checkIns.value.set(updated.id, updated)
-        return updated
+      } else {
+        checkIn = {
+          id: generateUUID(), habitId, date: today, value, note, createdAt: now, updatedAt: now
+        }
       }
 
-      const checkIn: HabitCheckIn = {
-        id: generateUUID(),
-        habitId,
-        date: today,
-        value,
-        note,
-        createdAt: now,
-        updatedAt: now
-      }
+      // 先写云端
+      const cfg = useSettingsStore().syncConfig
+      const ok = await atomicModifyPersonalData(cfg, (d) => {
+        const idx = d.data.habitCheckIns.findIndex(c => c.id === checkIn.id)
+        if (idx >= 0) d.data.habitCheckIns[idx] = { ...checkIn } as any
+        else d.data.habitCheckIns.push({ ...checkIn } as any)
+        return d
+      })
+      if (!ok) throw new Error('云端写入失败')
+      // 成功后写本地缓存
       await db.set('habitCheckIns', checkIn)
-      triggerAutoSync()
       checkIns.value.set(checkIn.id, checkIn)
       return checkIn
     } catch (e) {
@@ -145,16 +160,23 @@ export const useHabitStore = defineStore('habits', () => {
     }
   }
 
-  /** 软删除指定日期的打卡记录（设 deletedAt，不真删，与 Task 的 deleteTask 一致） */
+  /** 删除打卡记录：从云端移除，本地软删除 */
   async function deleteCheckIn(habitId: string, date: string): Promise<void> {
     try {
       const existing = Array.from(checkIns.value.values())
         .find(c => c.habitId === habitId && c.date === date)
       if (existing) {
+        // 先写云端（从数组移除）
+        const cfg = useSettingsStore().syncConfig
+        const ok = await atomicModifyPersonalData(cfg, (d) => {
+          d.data.habitCheckIns = d.data.habitCheckIns.filter(c => c.id !== existing.id)
+          return d
+        })
+        if (!ok) throw new Error('云端写入失败')
+        // 成功后本地软删除
         const now = new Date().toISOString()
         const updated = { ...existing, deletedAt: now, updatedAt: now }
         await db.set('habitCheckIns', updated)
-        triggerAutoSync()
         checkIns.value.set(existing.id, updated)
         await purgeOldDeletedCheckIns()
       }

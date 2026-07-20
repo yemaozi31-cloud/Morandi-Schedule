@@ -57,11 +57,11 @@
         </router-link>
       </div>
 
-      <!-- 同步按钮 -->
+      <!-- 刷新按钮（拉取云端覆盖本地） -->
       <div class="nav-section">
-        <button class="nav-item sync-btn" :disabled="syncing" @click="handleSync">
-          <Icon :name="'refresh'" :size="17" :class="{ spinning: syncing }" />
-          <span class="nav-label">{{ syncing ? '同步中...' : '同步' }}</span>
+        <button class="nav-item sync-btn" :disabled="refreshing" @click="handleRefresh">
+          <Icon :name="'refresh'" :size="17" :class="{ spinning: refreshing }" />
+          <span class="nav-label">{{ refreshing ? '刷新中...' : '刷新' }}</span>
         </button>
       </div>
     </nav>
@@ -78,7 +78,7 @@
 import { computed, ref } from 'vue'
 import { useUiStore } from '@/stores/uiStore'
 import { useSettingsStore } from '@/stores/settingsStore'
-import { sync } from '@/services/webdavSync'
+import { pullFromWebDAV } from '@/services/webdavSync'
 import { NAV_ITEMS } from '@/utils/constants'
 import Icon from '@/components/common/Icon.vue'
 
@@ -88,7 +88,7 @@ const settingsStore = useSettingsStore()
 const activeNav = computed(() => uiStore.activeNav)
 const isDark = computed(() => settingsStore.themeMode === 'dark')
 
-const syncing = ref(false)
+const refreshing = ref(false)
 
 const primaryItems = computed(() => NAV_ITEMS.filter(i => i.section === 'primary'))
 const secondaryItems = computed(() => NAV_ITEMS.filter(i => i.section === 'secondary'))
@@ -106,20 +106,26 @@ function openNewTask() {
   uiStore.openNewTaskForm()
 }
 
-async function handleSync() {
-  if (syncing.value) return
-  syncing.value = true
+async function handleRefresh() {
+  if (refreshing.value) return
+  refreshing.value = true
   try {
-    const result = await sync(settingsStore.syncConfig)
-    if (result.ok) {
-      window.__message?.success('同步完成')
-    } else {
+    const result = await pullFromWebDAV(settingsStore.syncConfig)
+    if (!result.ok) {
       window.__message?.error(result.message)
+      return
     }
+    // 拉取成功后重新加载 stores
+    const { useTaskStore } = await import('@/stores/taskStore')
+    const { useHabitStore } = await import('@/stores/habitStore')
+    await useTaskStore().loadTasks()
+    await useHabitStore().loadHabits()
+    await useHabitStore().loadCheckIns()
+    window.__message?.success('刷新完成')
   } catch {
-    window.__message?.error('同步失败')
+    window.__message?.error('刷新失败')
   } finally {
-    syncing.value = false
+    refreshing.value = false
   }
 }
 </script>

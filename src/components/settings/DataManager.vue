@@ -24,6 +24,15 @@
         </div>
         <button class="action-btn danger-btn" @click="handleClear">清除</button>
       </div>
+      <div class="action-row">
+        <div class="action-info">
+          <span class="action-label">上传同步</span>
+          <span class="action-desc">将本地缓存推送到云端</span>
+        </div>
+        <button class="action-btn" :disabled="uploading" @click="handleUpload">
+          {{ uploading ? '上传中…' : '上传' }}
+        </button>
+      </div>
       <div class="action-row danger">
         <div class="action-info">
           <span class="action-label">清除云端数据</span>
@@ -40,12 +49,13 @@
 <script setup lang="ts">
 import { ref } from 'vue'
 import { getAll, get, set, clear } from '@/db'
-import { deleteAccount } from '@/services/webdavSync'
+import { deleteAccount, pushToWebDAV } from '@/services/webdavSync'
 import { useSettingsStore } from '@/stores/settingsStore'
 import { showConfirm as showDialogConfirm } from '@/utils/globalConfirm'
 
 const settingsStore = useSettingsStore()
 const clearingCloud = ref(false)
+const uploading = ref(false)
 
 function showConfirm(title: string, message: string, onConfirm: () => void) {
   window.__dialog?.warning({
@@ -55,6 +65,22 @@ function showConfirm(title: string, message: string, onConfirm: () => void) {
     negativeText: '取消',
     onPositiveClick: onConfirm
   })
+}
+
+async function handleUpload() {
+  uploading.value = true
+  try {
+    const result = await pushToWebDAV(settingsStore.syncConfig)
+    if (result.ok) {
+      window.__message?.success('上传完成')
+    } else {
+      window.__message?.error(result.message)
+    }
+  } catch {
+    window.__message?.error('上传失败')
+  } finally {
+    uploading.value = false
+  }
 }
 
 async function handleClearCloud() {

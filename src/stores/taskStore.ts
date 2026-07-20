@@ -1,10 +1,11 @@
 import { defineStore } from 'pinia'
-import { triggerAutoSync } from '@/services/autoSync'
 import { ref, computed } from 'vue'
 import type { Task } from '@/types'
 import * as db from '@/db'
 import { getTodayStr, addDays, addMonths, parseISO, format } from '@/utils/date'
 import { generateUUID } from '@/utils/uuid'
+import { atomicModifyPersonalData } from '@/services/webdavSync'
+import { useSettingsStore } from '@/stores/settingsStore'
 
 export const useTaskStore = defineStore('tasks', () => {
   const tasks = ref<Map<string, Task>>(new Map())
@@ -202,8 +203,15 @@ export const useTaskStore = defineStore('tasks', () => {
       courseTeacher: data.courseTeacher ?? undefined
     }
     try {
+      // 先写云端
+      const cfg = useSettingsStore().syncConfig
+      const ok = await atomicModifyPersonalData(cfg, (d) => {
+        d.data.tasks.push({ ...task } as any)
+        return d
+      })
+      if (!ok) { console.error('createTask: 云端写入失败'); throw new Error('云端写入失败') }
+      // 成功后才写本地缓存
       await db.set('tasks', task)
-      triggerAutoSync()
       tasks.value.set(task.id, task)
       scheduleAndroidReminder(task)
       return task
@@ -237,8 +245,16 @@ export const useTaskStore = defineStore('tasks', () => {
       updatedAt: new Date().toISOString()
     }
     try {
+      // 先写云端
+      const cfg = useSettingsStore().syncConfig
+      const ok = await atomicModifyPersonalData(cfg, (d) => {
+        const idx = d.data.tasks.findIndex(t => t.id === id)
+        if (idx >= 0) d.data.tasks[idx] = { ...updated } as any
+        return d
+      })
+      if (!ok) { console.error('updateTask: 云端写入失败'); throw new Error('云端写入失败') }
+      // 成功后才写本地缓存
       await db.set('tasks', updated)
-      triggerAutoSync()
       tasks.value.set(id, updated)
       if (updated.deletedAt || updated.completedAt) {
         cancelAndroidReminder(id)
@@ -300,8 +316,15 @@ export const useTaskStore = defineStore('tasks', () => {
     tasks.value.set(id, { ...task, status: newStatus as Task['status'], completedAt: newStatus === 'completed' ? now : null, updatedAt: now })
 
     try {
-      await db.set('tasks', tasks.value.get(id)!)
-      triggerAutoSync()
+      // 先写云端
+      const cfg = useSettingsStore().syncConfig
+      const updated = tasks.value.get(id)!
+      await atomicModifyPersonalData(cfg, (d) => {
+        const idx = d.data.tasks.findIndex(t => t.id === id)
+        if (idx >= 0) d.data.tasks[idx] = { ...updated } as any
+        return d
+      })
+      await db.set('tasks', updated)
       if (newStatus === 'completed' && task.recurring) {
         await createNextRecurring(task)
       }

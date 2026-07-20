@@ -110,7 +110,7 @@
 import { ref, computed, onMounted, nextTick } from 'vue'
 import { useHabitStore } from '@/stores/habitStore'
 import { useSettingsStore } from '@/stores/settingsStore'
-import { fetchSharedData } from '@/services/webdavSync'
+import { fetchSharedData, pullFromWebDAV } from '@/services/webdavSync'
 import AppLayout from '@/components/layout/AppLayout.vue'
 import HabitCard from '@/components/habits/HabitCard.vue'
 import HabitHeatmap from '@/components/habits/HabitHeatmap.vue'
@@ -182,6 +182,8 @@ const colors = [
 ]
 
 onMounted(async () => {
+  // 先拉云端覆盖本地
+  try { await pullFromWebDAV(settingsStore.syncConfig) } catch {}
   await habitStore.loadHabits()
   await habitStore.loadCheckIns()
   await loadCloudSharedHabits()

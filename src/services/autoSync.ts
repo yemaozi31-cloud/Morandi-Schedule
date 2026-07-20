@@ -1,12 +1,12 @@
 /**
- * 自动同步器
- * 所有数据写操作完成后触发，防抖 2 秒后 push 到 WebDAV
+ * 自动同步器（云端为主模式下，只拉不推）
+ * 后台轮询：每 30 秒从云端拉取最新数据覆盖本地
+ * 每次操作已在 store 中直接调用 atomicModifyPersonalData 写云端
  */
-import { pushToWebDAV, pullFromWebDAV } from './webdavSync'
+import { pullFromWebDAV } from './webdavSync'
 import { useSettingsStore } from '@/stores/settingsStore'
 
 let timer: ReturnType<typeof setTimeout> | null = null
-let lastConfig: any = null
 
 export function triggerAutoSync(): void {
   if (timer) clearTimeout(timer)
@@ -17,20 +17,17 @@ export function triggerAutoSync(): void {
       const config = settingsStore.syncConfig
       if (!config.webdavUrl || !config.nickname) return
       if (!config.autoSync) return
-      // 先上传本地变更到云端，再拉取远程变更合并到本地
-      // push-first 确保本地删除操作不会被云端旧数据恢复
-      await pushToWebDAV(config)
-      await pullFromWebDAV(config).catch(() => {})
-      console.log('[AutoSync] 双向同步完成')
+      await pullFromWebDAV(config)
+      console.log('[AutoSync] 拉取完成')
     } catch (e) {
-      console.warn('[AutoSync] 推送失败:', e)
+      console.warn('[AutoSync] 拉取失败:', e)
     }
   }, 300)
 }
 
-// ─── 后台轮询（每 5 分钟拉取远程变更） ──
+// ─── 后台轮询（每 30 秒拉取云端） ──
 let pollTimer: ReturnType<typeof setInterval> | null = null
-const POLL_INTERVAL = 30 * 1000 // 30 秒
+const POLL_INTERVAL = 30 * 1000
 
 export function startBackgroundPolling(): void {
   if (pollTimer) return
@@ -39,8 +36,6 @@ export function startBackgroundPolling(): void {
       const settingsStore = useSettingsStore()
       const config = settingsStore.syncConfig
       if (!config.webdavUrl || !config.autoSync) return
-      // 后台轮询：先推送本地数据，再拉取远程变更合并
-      await pushToWebDAV(config).catch((e) => { console.warn('[AutoSync] 推送失败:', e) })
       await pullFromWebDAV(config).catch((e) => { console.warn('[AutoSync] 拉取失败:', e) })
       console.log('[AutoSync] 后台轮询完成')
     } catch (e) { console.warn('[AutoSync] 轮询异常:', e) }
