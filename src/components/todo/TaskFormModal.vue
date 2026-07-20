@@ -112,26 +112,11 @@
             <div class="form-row">
               <div class="form-group flex-1">
                 <label>重复</label>
-                <select v-model="form.recurringType">
-                  <option value="">不重复</option>
-                  <option value="daily">每天</option>
-                  <option value="weekly">每周</option>
-                  <option value="weekdays">工作日</option>
-                  <option value="monthly">每月</option>
-                  <option value="yearly">每年</option>
-                </select>
+                <MorandiSelect v-model="form.recurringType" :options="recurringOptions" placeholder="不重复" />
               </div>
               <div class="form-group flex-1">
                 <label>提醒</label>
-                <select v-model="form.reminderMinutes">
-                  <option :value="null">不提醒</option>
-                  <option :value="0">准时</option>
-                  <option :value="5">提前5分钟</option>
-                  <option :value="10">提前10分钟</option>
-                  <option :value="30">提前30分钟</option>
-                  <option :value="60">提前1小时</option>
-                  <option :value="1440">提前1天</option>
-                </select>
+                <MorandiSelect v-model="form.reminderMinutes" :options="reminderOptions" placeholder="不提醒" />
               </div>
             </div>
           </div>
@@ -156,6 +141,7 @@ import { nlpParse } from '@/utils/nlpParser'
 import Icon from '@/components/common/Icon.vue'
 import MorandiDatePicker from '@/components/common/MorandiDatePicker.vue'
 import MorandiTimePicker from '@/components/common/MorandiTimePicker.vue'
+import MorandiSelect from '@/components/common/MorandiSelect.vue'
 
 const props = defineProps<{
   visible: boolean
@@ -168,6 +154,25 @@ const emit = defineEmits<{
   (e: 'save', data: any): void
   (e: 'switchCourse'): void
 }>()
+
+const recurringOptions = [
+  { value: '', label: '不重复' },
+  { value: 'daily', label: '每天' },
+  { value: 'weekly', label: '每周' },
+  { value: 'weekdays', label: '工作日' },
+  { value: 'monthly', label: '每月' },
+  { value: 'yearly', label: '每年' }
+]
+
+const reminderOptions = [
+  { value: null, label: '不提醒' },
+  { value: 0, label: '准时' },
+  { value: 5, label: '提前5分钟' },
+  { value: 10, label: '提前10分钟' },
+  { value: 30, label: '提前30分钟' },
+  { value: 60, label: '提前1小时' },
+  { value: 1440, label: '提前1天' }
+]
 
 function switchToCourse() { emit('switchCourse') }
 
