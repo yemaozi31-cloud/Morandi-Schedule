@@ -116,7 +116,7 @@ import { useTagStore } from '@/stores/tagStore'
 import { usePomodoroStore } from '@/stores/pomodoroStore'
 import { useHabitStore } from '@/stores/habitStore'
 import { useSettingsStore } from '@/stores/settingsStore'
-import { fetchSharedData, pullFromWebDAV } from '@/services/webdavSync'
+import { fetchSharedData, fetchSharedCheckIns, pullFromWebDAV } from '@/services/webdavSync'
 import type { Task } from '@/types'
 import { nlpParse } from '@/utils/nlpParser'
 import { getTodayStr } from '@/utils/date'
@@ -150,6 +150,8 @@ const sharedRefreshTrigger = ref(0)
 
 // 云端共享习惯
 const cloudSharedHabits = ref<any[]>([])
+// 共享习惯今天是否已打卡（用于计算 pendingHabitCount）
+const sharedTodayChecked = ref<Set<string>>(new Set())
 
 // 30 秒轮询：刷新共享数据
 setInterval(() => {
@@ -167,7 +169,9 @@ const todayHabits = computed(() => {
 
 const pendingHabitCount = computed(() => {
   return todayHabits.value.filter(h => {
-    if (h.isShared) return false
+    if (h.isShared) {
+      return !sharedTodayChecked.value.has(getTodayStr())
+    }
     const val = habitStore.getPeriodValue(h.id)
     return val < h.target
   }).length
@@ -192,6 +196,12 @@ async function loadCloudSharedHabits() {
       sharedCreatedBy: h.createdBy,
       createdAt: h.createdAt
     }))
+    // 同时拉取共享打卡记录（用于计算 pendingHabitCount）
+    const checkIns = await fetchSharedCheckIns(cfg)
+    const myDates = checkIns
+      .filter(c => c.nick === nick)
+      .map(c => c.date)
+    sharedTodayChecked.value = new Set(myDates)
   } catch { /* 轮询静默重试 */ }
 }
 
