@@ -10,7 +10,7 @@
         </span>
         <div class="heatmap-nav-inline">
           <button @click.stop="changeMonth(-1)">←</button>
-          <span>{{ heatmapYear }}年{{ heatmapMonth + 1 }}月</span>
+          <span>{{ heatmapMonth + 1 }}月</span>
           <button @click.stop="changeMonth(1)">→</button>
         </div>
         <span class="compact-streak"><Icon name="flame" :size="12" /> {{ streak }} {{ streakUnit }}</span>
@@ -263,8 +263,8 @@ async function handleDelete() {
   display: flex;
   align-items: center;
   gap: 4px;
-  padding: var(--spacing-xs) var(--spacing-md);
-  min-height: 48px;
+  padding: var(--spacing-xs) var(--spacing-sm);
+  min-height: 44px;
 }
 
 .compact-name {
@@ -273,7 +273,7 @@ async function handleDelete() {
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
-  font-size: var(--font-size-md);
+  font-size: var(--font-size-sm);
   color: var(--color-text);
   font-weight: 500;
 }
@@ -495,18 +495,30 @@ async function handleDelete() {
 
 /* ── 手机端缩小按钮 ──────────────────────── */
 @media (max-width: 767px) {
+  .compact-row {
+    gap: 2px;
+    padding: var(--spacing-xs) var(--spacing-sm);
+  }
   .compact-checkin {
-    min-width: 40px;
-    padding: 6px 8px;
-    font-size: 11px;
+    min-width: 34px;
+    padding: 4px 6px;
+    font-size: 10px;
   }
   .compact-expand {
-    min-width: 32px;
-    min-height: 28px;
+    min-width: 28px;
+    min-height: 24px;
   }
   .compact-delete {
-    min-width: 32px;
-    min-height: 28px;
+    min-width: 28px;
+    min-height: 24px;
+  }
+  .compact-streak {
+    font-size: 10px;
+    gap: 1px;
+  }
+  .compact-streak .compact-dot {
+    width: 8px;
+    height: 8px;
   }
 }
 </style>
