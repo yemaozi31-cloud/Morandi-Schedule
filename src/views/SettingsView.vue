@@ -63,11 +63,6 @@
                 <input type="checkbox" v-model="autoStartEnabled" @change="handleAutoStartChange" />
                 <span class="toggle-slider"></span>
               </label>
-            </div>
-          </div>
-        </section>
-        <section class="settings-section">
-          <div class="action-group">
             <div class="action-row">
               <div class="action-info">
                 <span class="action-label">退出登录</span>

@@ -167,13 +167,6 @@ async function handleClear() {
 </script>
 
 <style scoped>
-.data-manager {
-  background: var(--color-surface);
-  border-radius: var(--radius-lg);
-  border: 1px solid var(--color-border-light);
-  overflow: hidden;
-}
-
 .section-title {
   font-size: var(--font-size-lg);
   color: var(--color-text);
@@ -183,14 +176,6 @@ async function handleClear() {
 }
 
 .action-group {
-  background: var(--color-surface);
-  border-radius: var(--radius-lg);
-  border: 1px solid var(--color-border-light);
-  overflow: hidden;
-  box-shadow: 0 1px 3px var(--color-shadow);
-}
-
-.data-manager {
   background: var(--color-surface);
   border-radius: var(--radius-lg);
   border: 1px solid var(--color-border-light);
