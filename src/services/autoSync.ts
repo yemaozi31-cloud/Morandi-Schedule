@@ -30,7 +30,7 @@ export function triggerAutoSync(): void {
 
 // ─── 后台轮询（每 5 分钟拉取远程变更） ──
 let pollTimer: ReturnType<typeof setInterval> | null = null
-const POLL_INTERVAL = 5 * 60 * 1000 // 5 分钟
+const POLL_INTERVAL = 30 * 1000 // 30 秒
 
 export function startBackgroundPolling(): void {
   if (pollTimer) return
