@@ -187,12 +187,14 @@ export async function pushToWebDAV(config: SyncConfig): Promise<SyncResult> {
     // 1. 读取本地全量数据
     const allTasks = await db.getAll<any>("tasks")
     const tasks = allTasks.filter((t: any) => !t.deletedAt)
-    const [tags, habits, habitCheckIns, pomodoroSessions] = await Promise.all([
+    const [tags, habits, allCheckIns, pomodoroSessions] = await Promise.all([
       db.getAll<any>("tags"),
       db.getAll<any>("habits"),
       db.getAll<any>("habitCheckIns"),
       db.getAll<any>("pomodoroSessions")
     ])
+    // 打卡记录过滤掉已软删除的（与任务的 deletedAt 逻辑一致）
+    const habitCheckIns = allCheckIns.filter((c: any) => !c.deletedAt)
     const localData = { tasks, tags, habits, habitCheckIns, pomodoroSessions }
 
     const url = syncFileUrl(config)

@@ -25,4 +25,7 @@ export interface HabitCheckIn {
   value: number
   note?: string
   createdAt: string
+  updatedAt?: string
+  /** 软删除时间戳，不为空表示已删除（与 Task 的 deletedAt 一致） */
+  deletedAt?: string | null
 }

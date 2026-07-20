@@ -79,12 +79,13 @@ export const useHabitStore = defineStore('habits', () => {
       await db.remove('habits', id)
       triggerAutoSync()
       habits.value.delete(id)
-      // 同时删除关联的打卡记录
+      // 同时软删除关联的打卡记录
+      const now = new Date().toISOString()
       const relatedCheckIns = Array.from(checkIns.value.values()).filter(c => c.habitId === id)
       for (const c of relatedCheckIns) {
-        await db.remove('habitCheckIns', c.id)
-              triggerAutoSync()
-        checkIns.value.delete(c.id)
+        const updated = { ...c, deletedAt: now, updatedAt: now }
+        await db.set('habitCheckIns', updated)
+        checkIns.value.set(c.id, updated)
       }
     } catch (e) {
       console.error('删除习惯失败:', e)
@@ -113,7 +114,8 @@ export const useHabitStore = defineStore('habits', () => {
         date: today,
         value,
         note,
-        createdAt: now
+        createdAt: now,
+        updatedAt: now
       }
       await db.set('habitCheckIns', checkIn)
       triggerAutoSync()
@@ -125,15 +127,17 @@ export const useHabitStore = defineStore('habits', () => {
     }
   }
 
-  /** 删除指定日期的打卡记录（用于取消共享习惯打卡） */
+  /** 软删除指定日期的打卡记录（设 deletedAt，不真删，与 Task 的 deleteTask 一致） */
   async function deleteCheckIn(habitId: string, date: string): Promise<void> {
     try {
       const existing = Array.from(checkIns.value.values())
         .find(c => c.habitId === habitId && c.date === date)
       if (existing) {
-        await db.remove('habitCheckIns', existing.id)
-              triggerAutoSync()
-        checkIns.value.delete(existing.id)
+        const now = new Date().toISOString()
+        const updated = { ...existing, deletedAt: now, updatedAt: now }
+        await db.set('habitCheckIns', updated)
+        triggerAutoSync()
+        checkIns.value.set(existing.id, updated)
       }
     } catch (e) {
       console.error('删除打卡失败:', e)
@@ -141,14 +145,19 @@ export const useHabitStore = defineStore('habits', () => {
     }
   }
 
+  /** 获取活跃的打卡记录（过滤已软删除的） */
+  function getActiveCheckIns(): HabitCheckIn[] {
+    return Array.from(checkIns.value.values()).filter(c => !c.deletedAt)
+  }
+
   function getCheckInsForHabit(habitId: string): HabitCheckIn[] {
-    return Array.from(checkIns.value.values())
+    return getActiveCheckIns()
       .filter(c => c.habitId === habitId)
       .sort((a, b) => b.date.localeCompare(a.date))
   }
 
   function getCheckInsInRange(start: string, end: string, habitId?: string): HabitCheckIn[] {
-    return Array.from(checkIns.value.values()).filter(c =>
+    return getActiveCheckIns().filter(c =>
       c.date >= start && c.date <= end &&
       (!habitId || c.habitId === habitId)
     )
