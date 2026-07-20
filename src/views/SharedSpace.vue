@@ -190,7 +190,7 @@ async function refreshLiveUsers() {
   if (!isConfigured.value) return
   try {
     liveUsers.value = await discoverUsersFromWebDAV(config.value)
-  } catch { /* ignore */ }
+  } catch (e) { console.warn('[SharedSpace] 刷新用户列表失败:', e) }
 }
 
 function selectUser(n: string) {
@@ -312,7 +312,7 @@ async function loadSharedData() {
     const data = await fetchSharedData(config.value)
     sharedData.value = data
     await refreshLiveUsers()
-  } catch { /* 静默失败 */ }
+  } catch (e) { console.error('[SharedSpace] 加载共享数据失败:', e) }
 }
 
 async function handleCreate() {

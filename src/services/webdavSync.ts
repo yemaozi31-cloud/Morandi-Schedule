@@ -37,7 +37,7 @@ async function safeFetch(input: RequestInfo | URL, init?: RequestInit): Promise<
 
 // ─── 写入锁（防止并发同步导致文件损坏）
 let pushLock = false
-const pendingPushes: (() => Promise<void>)[] = []
+const pendingPushes: ((value: void) => void)[] = []
 
 // ─── 类型 ─────────────────────────────────────────────────────
 
@@ -437,7 +437,8 @@ export async function fetchSharedData(config: SyncConfig): Promise<SharedData> {
     data.knownUsers = Array.from(merged).filter(u => u && u !== 'default' && u !== 'shared')
     // 去掉自动 saveSharedData — 避免读一次就写一次
     return data
-  } catch { /* 静默失败，下次重试 */
+  } catch (e) {
+    console.error('[webdavSync] 读取共享数据失败，返回空数据等待下次重试:', e)
     const discovered = await discoverUsersFromWebDAV(config)
     return { version: 1, habits: [], checkIns: [], knownUsers: discovered }
   }
@@ -459,24 +460,97 @@ async function saveSharedData(config: SyncConfig, data: SharedData): Promise<boo
   } catch (e) { console.error('[webdavSync] saveSharedData 失败:', e); return false }
 }
 
-/** 拉取共享打卡数据（兼容旧接口） */
+// ─── ETag 乐观锁写入 ──────────────────────────────────
+// 所有共享数据的写操作都经过 atomicModifySharedData，
+// 它用 ETag + If-Match 头实现条件写入，冲突时自动重试。
+
+/** 原子修改共享数据：读取 → 修改 → 条件写入（If-Match），冲突重试 */
+async function atomicModifySharedData(
+  config: SyncConfig,
+  modify: (data: SharedData) => SharedData,
+  maxRetries = 3
+): Promise<boolean> {
+  const url = sharedFileUrl(config)
+  const authHeaders = { Authorization: 'Basic ' + btoa(`${config.webdavUsername}:${config.webdavPassword}`) }
+
+  for (let attempt = 0; attempt < maxRetries; attempt++) {
+    try {
+      // 1. 读取当前数据，获取 ETag
+      const getRes = await safeFetch(url, { headers: authHeaders })
+      let data: SharedData
+
+      if (getRes.status === 404) {
+        const discovered = await discoverUsersFromWebDAV(config)
+        data = { version: 1, habits: [], checkIns: [], knownUsers: discovered }
+      } else if (!getRes.ok) {
+        console.error(`[webdavSync] 读取共享数据失败 HTTP ${getRes.status}`)
+        return false
+      } else {
+        data = await getRes.json()
+        // 合并扫描发现的新用户
+        const discovered = await discoverUsersFromWebDAV(config)
+        const merged = new Set([...(data.knownUsers || []), ...discovered])
+        data.knownUsers = Array.from(merged).filter(u => u && u !== 'default' && u !== 'shared')
+      }
+
+      // 获取服务器返回的 ETag（WebDAV 标准支持）
+      const etag = getRes.headers.get('ETag') || getRes.headers.get('etag')
+
+      // 2. 执行修改逻辑
+      const newData = modify(data)
+      newData.version = (data.version || 0) + 1  // 自增版本号
+
+      // 3. 条件写入（If-Match）
+      const putHeaders: Record<string, string> = {
+        ...authHeaders,
+        'Content-Type': 'application/json'
+      }
+      if (etag) putHeaders['If-Match'] = etag
+
+      const putRes = await safeFetch(url, {
+        method: 'PUT',
+        headers: putHeaders,
+        body: JSON.stringify(newData, null, 2)
+      })
+
+      if (putRes.ok) return true
+
+      if (putRes.status === 412) {
+        // 412 Precondition Failed → 别人改过了 → 重试
+        console.warn(`[webdavSync] 写入冲突（第 ${attempt + 1} 次重试）`)
+        await new Promise(r => setTimeout(r, 300 * (attempt + 1) + Math.random() * 200))
+        continue
+      }
+
+      console.error(`[webdavSync] 写入失败 HTTP ${putRes.status}`)
+      return false
+    } catch (e) {
+      console.error('[webdavSync] atomicModifySharedData 错误:', e)
+      if (attempt === maxRetries - 1) return false
+      await new Promise(r => setTimeout(r, 500))
+    }
+  }
+  return false
+}
+
+/** 拉取共享打卡数据（兼容旧接口，只读） */
 export async function fetchSharedCheckIns(config: SyncConfig): Promise<SharedCheckIn[]> {
   const data = await fetchSharedData(config)
   return data.checkIns
 }
 
-/** 提交打卡记录（自动去重：同人+同习惯+同日 不重复添加） */
+/** 提交打卡记录（自动去重 + 原子写入） */
 export async function submitCheckIn(config: SyncConfig, checkIn: SharedCheckIn): Promise<boolean> {
-  const data = await fetchSharedData(config)
-  const exists = data.checkIns.some(
-    c => c.habitName === checkIn.habitName && c.nick === checkIn.nick && c.date === checkIn.date
-  )
-  if (exists) return true // 已存在，不重复添加
-  data.checkIns.push(checkIn)
-  return saveSharedData(config, data)
+  return atomicModifySharedData(config, (data) => {
+    const exists = data.checkIns.some(
+      c => c.habitName === checkIn.habitName && c.nick === checkIn.nick && c.date === checkIn.date
+    )
+    if (exists) return data // 已存在
+    return { ...data, checkIns: [...data.checkIns, checkIn] }
+  })
 }
 
-/** 创建共享习惯并邀请成员 */
+/** 创建共享习惯并邀请成员（原子写入） */
 export async function createSharedHabit(
   config: SyncConfig,
   habitName: string,
@@ -484,16 +558,17 @@ export async function createSharedHabit(
   invitees: string[],
   deadlineTime?: string
 ): Promise<boolean> {
-  const existing = await fetchSharedData(config)
-  existing.habits.push({
-    name: habitName,
-    createdBy,
-    members: [createdBy], // 创建者自动加入
-    invitees: invitees.filter(n => n !== createdBy),
-    createdAt: new Date().toISOString(),
-    checkinDeadline: deadlineTime || undefined
+  return atomicModifySharedData(config, (data) => {
+    const newHabit: SharedHabitData = {
+      name: habitName,
+      createdBy,
+      members: [createdBy],
+      invitees: invitees.filter(n => n !== createdBy),
+      createdAt: new Date().toISOString(),
+      checkinDeadline: deadlineTime || undefined
+    }
+    return { ...data, habits: [...data.habits, newHabit] }
   })
-  return saveSharedData(config, existing)
 }
 
 /** 接受共享习惯邀请 */
@@ -502,15 +577,18 @@ export async function acceptSharedHabitInvite(
   habitName: string,
   nick: string
 ): Promise<boolean> {
-  const data = await fetchSharedData(config)
-  const habit = data.habits.find(h => h.name === habitName)
-  if (!habit) return false
-  // 从 invitees 移到 members
-  habit.invitees = habit.invitees.filter(n => n !== nick)
-  if (!habit.members.includes(nick)) {
-    habit.members.push(nick)
-  }
-  return saveSharedData(config, data)
+  return atomicModifySharedData(config, (data) => {
+    const idx = data.habits.findIndex(h => h.name === habitName)
+    if (idx === -1) return data // habit 不存在，不做修改
+    const newHabits = data.habits.map((h, i) =>
+      i === idx ? {
+        ...h,
+        invitees: h.invitees.filter(n => n !== nick),
+        members: h.members.includes(nick) ? h.members : [...h.members, nick]
+      } : h
+    )
+    return { ...data, habits: newHabits }
+  })
 }
 
 /** 忽略共享习惯邀请 */
@@ -519,11 +597,14 @@ export async function ignoreSharedHabitInvite(
   habitName: string,
   nick: string
 ): Promise<boolean> {
-  const data = await fetchSharedData(config)
-  const habit = data.habits.find(h => h.name === habitName)
-  if (!habit) return false
-  habit.invitees = habit.invitees.filter(n => n !== nick)
-  return saveSharedData(config, data)
+  return atomicModifySharedData(config, (data) => {
+    const idx = data.habits.findIndex(h => h.name === habitName)
+    if (idx === -1) return data
+    const newHabits = data.habits.map((h, i) =>
+      i === idx ? { ...h, invitees: h.invitees.filter(n => n !== nick) } : h
+    )
+    return { ...data, habits: newHabits }
+  })
 }
 
 /** 退出共享习惯（从 members 中移除，成员为空则删除习惯） */
@@ -532,53 +613,59 @@ export async function leaveSharedHabit(
   habitName: string,
   nick: string
 ): Promise<boolean> {
-  const data = await fetchSharedData(config)
-  const idx = data.habits.findIndex(h => h.name === habitName)
-  if (idx === -1) return false
-  const habit = data.habits[idx]
-  habit.members = habit.members.filter(n => n !== nick)
-  // 同时清理该用户在习惯下的所有打卡记录
-  data.checkIns = data.checkIns.filter(c => !(c.habitName === habitName && c.nick === nick))
-  if (habit.members.length === 0) {
-    data.habits.splice(idx, 1) // 没有成员了，删除习惯
-  }
-  return saveSharedData(config, data)
+  return atomicModifySharedData(config, (data) => {
+    const idx = data.habits.findIndex(h => h.name === habitName)
+    if (idx === -1) return data
+    const newHabits = [...data.habits]
+    if (newHabits[idx].members.length <= 1) {
+      // 只剩自己 → 删除整个习惯
+      newHabits.splice(idx, 1)
+    } else {
+      newHabits[idx] = { ...newHabits[idx], members: newHabits[idx].members.filter(n => n !== nick) }
+    }
+    // 清理该用户的打卡记录
+    return {
+      ...data,
+      habits: newHabits,
+      checkIns: data.checkIns.filter(c => !(c.habitName === habitName && c.nick === nick))
+    }
+  })
 }
 
-/** 为共享习惯打卡 */
 /** 获取本地日期 YYYY-MM-DD */
 function localDateStr(): string {
   const d = new Date()
   return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`
 }
 
+/** 为共享习惯打卡 */
 export async function checkInSharedHabit(
   config: SyncConfig,
   habitName: string,
   nick: string
 ): Promise<boolean> {
-  const ok = await submitCheckIn(config, {
+  return submitCheckIn(config, {
     id: crypto.randomUUID(),
     habitName,
     nick,
     date: localDateStr(),
     time: new Date().toLocaleTimeString('zh-CN', { hour: '2-digit', minute: '2-digit' })
   })
-  return ok
 }
 
-/** 取消打卡（删除当日该用户的打卡记录） */
+/** 取消打卡（删除当日该用户的打卡记录，原子写入） */
 export async function cancelCheckIn(
   config: SyncConfig,
   habitName: string,
   nick: string
 ): Promise<boolean> {
-  const data = await fetchSharedData(config)
   const today = localDateStr()
-  data.checkIns = data.checkIns.filter(
-    c => !(c.habitName === habitName && c.nick === nick && c.date === today)
-  )
-  return saveSharedData(config, data)
+  return atomicModifySharedData(config, (data) => ({
+    ...data,
+    checkIns: data.checkIns.filter(
+      c => !(c.habitName === habitName && c.nick === nick && c.date === today)
+    )
+  }))
 }
 
 /** 获取某个共享习惯的团队打卡热力图数据 */

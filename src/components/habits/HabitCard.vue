@@ -109,7 +109,7 @@ async function refreshSharedFromCloud() {
       .filter(c => c.habitName === props.habit.sharedHabitName && c.nick === cfg.value.nickname)
       .map(c => c.date)
     sharedCheckInDates.value = new Set(myDates)
-  } catch { /* 静默失败 */ }
+  } catch (e) { console.error('[HabitCard] 刷新共享打卡失败:', e) }
 }
 
 /** 今天是否已打卡（共享/普通通用） */
@@ -185,13 +185,21 @@ async function handleCheckIn() {
   try {
     if (props.habit.isShared) {
       if (todayChecked.value) {
-        await cancelCheckIn(cfg.value, props.habit.sharedHabitName!, cfg.value.nickname!)
-        sharedCheckInDates.value.delete(getTodayStr())
-        window.__message?.info('已取消打卡')
+        const ok = await cancelCheckIn(cfg.value, props.habit.sharedHabitName!, cfg.value.nickname!)
+        if (ok) {
+          sharedCheckInDates.value.delete(getTodayStr())
+          window.__message?.info('已取消打卡')
+        } else {
+          window.__message?.error('取消失败，请检查网络')
+        }
       } else {
-        await checkInSharedHabit(cfg.value, props.habit.sharedHabitName!, cfg.value.nickname!)
-        sharedCheckInDates.value.add(getTodayStr())
-        window.__message?.success('打卡成功')
+        const ok = await checkInSharedHabit(cfg.value, props.habit.sharedHabitName!, cfg.value.nickname!)
+        if (ok) {
+          sharedCheckInDates.value.add(getTodayStr())
+          window.__message?.success('打卡成功')
+        } else {
+          window.__message?.error('打卡失败，请检查网络')
+        }
       }
       emit('checked', props.habit.id)
       return
