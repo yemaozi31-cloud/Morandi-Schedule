@@ -13,7 +13,7 @@
           <span>{{ heatmapMonth + 1 }}月</span>
           <button @click.stop="changeMonth(1)">→</button>
         </div>
-        <span class="compact-streak"><Icon name="flame" :size="12" /> {{ streak }} {{ streakUnit }}</span>
+        <span class="compact-streak"><Icon name="flame" :size="12" /> {{ streak }}<span class="streak-unit"> {{ streakUnit }}</span></span>
         <span class="compact-dot" :class="{ completed: isCompleted }"></span>
         <button class="compact-checkin" :disabled="!habit.isShared && !todayChecked && isCompleted" @click.stop="handleCheckIn">
           {{ todayChecked ? '取消' : '打卡' }}
@@ -512,7 +512,7 @@ async function handleDelete() {
     min-width: 28px;
     min-height: 24px;
   }
-  .compact-streak {
+  .streak-unit {
     display: none;
   }
 }
