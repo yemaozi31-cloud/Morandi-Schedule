@@ -240,7 +240,8 @@ export async function pushToWebDAV(config: SyncConfig): Promise<SyncResult> {
       (merged.data as any)[storeName] = Array.from(itemMap.values())
     }
 
-    // 合并完成后过滤打卡记录的 deletedAt（已删的被本地版本覆盖到云端，再从输出中去掉）
+    // 合并完成后过滤已软删除的记录（已删的被本地版本覆盖到云端，再从输出中去掉）
+    merged.data.habits = merged.data.habits.filter((h: any) => !h.deletedAt)
     merged.data.habitCheckIns = merged.data.habitCheckIns.filter((c: any) => !c.deletedAt)
 
     // 4. 序列化 + 加密 + 写入

@@ -10,10 +10,15 @@ export const useHabitStore = defineStore('habits', () => {
   const habits = ref<Map<string, Habit>>(new Map())
   const checkIns = ref<Map<string, HabitCheckIn>>(new Map())
 
-  const sortedHabits = computed(() => {
+  /** 活跃的习惯（未软删除的） */
+  const activeHabits = computed(() => {
     const arr: Habit[] = []
-    habits.value.forEach(h => arr.push(h))
-    return arr.sort((a, b) => a.createdAt.localeCompare(b.createdAt))
+    habits.value.forEach(h => { if (!h.deletedAt) arr.push(h) })
+    return arr
+  })
+
+  const sortedHabits = computed(() => {
+    return [...activeHabits.value].sort((a, b) => a.createdAt.localeCompare(b.createdAt))
   })
 
   async function loadHabits() {
@@ -76,16 +81,20 @@ export const useHabitStore = defineStore('habits', () => {
 
   async function deleteHabit(id: string) {
     try {
-      await db.remove('habits', id)
-      triggerAutoSync()
-      habits.value.delete(id)
-      // 同时软删除关联的打卡记录
+      const existing = habits.value.get(id)
+      if (!existing) return
       const now = new Date().toISOString()
+      // 软删除习惯
+      const updated: Habit = { ...existing, deletedAt: now, updatedAt: now }
+      await db.set('habits', updated)
+      triggerAutoSync()
+      habits.value.set(id, updated)
+      // 同时软删除关联的打卡记录
       const relatedCheckIns = Array.from(checkIns.value.values()).filter(c => c.habitId === id)
       for (const c of relatedCheckIns) {
-        const updated = { ...c, deletedAt: now, updatedAt: now }
-        await db.set('habitCheckIns', updated)
-        checkIns.value.set(c.id, updated)
+        const uc = { ...c, deletedAt: now, updatedAt: now }
+        await db.set('habitCheckIns', uc)
+        checkIns.value.set(c.id, uc)
       }
     } catch (e) {
       console.error('删除习惯失败:', e)

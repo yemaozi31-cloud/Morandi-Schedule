@@ -10,6 +10,8 @@ export interface Habit {
   reminderDays?: number[] | null
   createdAt: string
   updatedAt?: string
+  /** 软删除时间戳，不为空表示已删除 */
+  deletedAt?: string | null
   /** 是否为共享习惯 */
   isShared?: boolean
   /** 共享习惯的名称（对应 shared.json 中的 habitName） */
