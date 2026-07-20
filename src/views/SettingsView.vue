@@ -63,6 +63,7 @@
                 <input type="checkbox" v-model="autoStartEnabled" @change="handleAutoStartChange" />
                 <span class="toggle-slider"></span>
               </label>
+            </div>
             <div class="action-row">
               <div class="action-info">
                 <span class="action-label">退出登录</span>
@@ -318,22 +319,26 @@ function handleLogout() {
   background: var(--color-surface);
   border-radius: var(--radius-lg);
   border: 1px solid var(--color-border-light);
-  padding: var(--spacing-lg);
+  overflow: hidden;
   box-shadow: 0 1px 3px var(--color-shadow);
 }
 
 .about-content {
   display: flex;
   flex-direction: column;
-  gap: var(--spacing-sm);
 }
 
 .about-row {
   display: flex;
   justify-content: space-between;
   align-items: center;
-  padding: var(--spacing-xs) 0;
+  padding: var(--spacing-md) var(--spacing-lg);
+  border-bottom: 1px solid var(--color-border-light);
   min-width: 0;
+}
+
+.about-row:last-child {
+  border-bottom: none;
 }
 
 .about-label {
