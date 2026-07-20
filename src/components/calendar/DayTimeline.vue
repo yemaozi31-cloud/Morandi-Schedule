@@ -54,7 +54,7 @@
     >
       <template #task-meta="{ task }">
         <span v-if="task.isSpanning && task.startDate && task.dueDate !== task.startDate" class="task-meta">
-          {{ task.startDate.slice(5) }}~{{ task.dueDate.slice(5) }}
+          {{ task.startDate.slice(5) }}~{{ task.dueDate?.slice(5) }}
         </span>
       </template>
     </PeriodSection>

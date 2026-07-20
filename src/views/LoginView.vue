@@ -168,7 +168,7 @@ async function handleSubmit() {
 
       let text = await res.text()
       // 调试信息（直接显示在页面上）
-      const debugInfo = {
+      const debugInfo: Record<string, any> = {
         requestUrl: url,
         httpStatus: res.status,
         contentType: res.headers.get('content-type'),

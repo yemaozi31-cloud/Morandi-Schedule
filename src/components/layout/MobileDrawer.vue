@@ -78,14 +78,16 @@ async function handleSync() {
   }
 }
 
+interface NavGroup { label: string; items: typeof NAV_ITEMS }
+
 const navGroups = computed(() => {
-  const groups: { label: string; items: typeof NAV_ITEMS }[] = []
-  let currentGroup: typeof NAV_ITEMS = []
+  const groups: NavGroup[] = []
+  let currentGroup: (typeof NAV_ITEMS)[number][] = []
 
   for (const item of NAV_ITEMS) {
     if (item.section === 'separator') {
       if (currentGroup.length > 0) {
-        groups.push({ label: '', items: [...currentGroup] })
+        groups.push({ label: '', items: currentGroup as unknown as typeof NAV_ITEMS })
         currentGroup = []
       }
     } else {
@@ -93,7 +95,7 @@ const navGroups = computed(() => {
     }
   }
   if (currentGroup.length > 0) {
-    groups.push({ label: '', items: currentGroup })
+    groups.push({ label: '', items: currentGroup as unknown as typeof NAV_ITEMS })
   }
 
   if (groups.length >= 2) {

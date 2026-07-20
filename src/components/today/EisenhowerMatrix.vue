@@ -81,6 +81,10 @@ const quadrants = [
 
 let draggedTaskId: string | null = null
 
+function onDragEnd() {
+  draggedTaskId = null
+}
+
 function onDragStart(e: DragEvent, taskId: string) {
   draggedTaskId = taskId
   if (e.dataTransfer) {

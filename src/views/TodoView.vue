@@ -140,7 +140,7 @@ const groupedTasks = computed(() => {
   for (const task of taskStore.filteredTasks) {
     // 持续事件：按区间判断所属分组
     if (task.isSpanning && task.startDate) {
-      if (today >= task.startDate && today <= task.dueDate) {
+      if (task.dueDate && today >= task.startDate && today <= task.dueDate) {
         groups[0].tasks.push(task) // 进行中 → 今天组
       } else if (task.startDate === tomorrowStr) {
         groups[1].tasks.push(task)

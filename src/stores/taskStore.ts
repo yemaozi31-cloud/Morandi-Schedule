@@ -40,7 +40,7 @@ export const useTaskStore = defineStore('tasks', () => {
     const today = getTodayStr()
     return regularTasks.value.filter(t => {
       if (t.status === 'cancelled') return false
-      if (t.isSpanning && t.startDate) {
+      if (t.isSpanning && t.startDate && t.dueDate) {
         return today >= t.startDate && today <= t.dueDate
       }
       return t.dueDate === today
@@ -77,19 +77,19 @@ export const useTaskStore = defineStore('tasks', () => {
     const today = getTodayStr()
     if (filter.value.dateRange === 'today') {
       result = result.filter(t => {
-        if (t.isSpanning && t.startDate) return today >= t.startDate && today <= t.dueDate
+        if (t.isSpanning && t.startDate && t.dueDate) return today >= t.startDate && today <= t.dueDate
         return t.dueDate === today
       })
     } else if (filter.value.dateRange === 'overdue') {
       result = result.filter(t => {
-        if (t.isSpanning && t.startDate) return t.dueDate < today && t.status !== 'completed'
+        if (t.isSpanning && t.startDate && t.dueDate) return t.dueDate < today && t.status !== 'completed'
         return t.dueDate && t.dueDate < today && t.status !== 'completed'
       })
     } else if (filter.value.dateRange === 'tomorrow') {
       const tomorrow = new Date(); tomorrow.setDate(tomorrow.getDate() + 1)
       const tomStr = tomorrow.toISOString().slice(0, 10)
       result = result.filter(t => {
-        if (t.isSpanning && t.startDate) return tomStr >= t.startDate && tomStr <= t.dueDate
+        if (t.isSpanning && t.startDate && t.dueDate) return tomStr >= t.startDate && tomStr <= t.dueDate
         return t.dueDate === tomStr
       })
     } else if (filter.value.dateRange === 'thisWeek') {
@@ -192,14 +192,14 @@ export const useTaskStore = defineStore('tasks', () => {
       completedAt: null,
       deletedAt: null,
       // ── 课程字段 ──
-      isCourse: data.isCourse || null,
-      courseDay: data.courseDay || null,
-      courseStartTime: data.courseStartTime || null,
-      courseEndTime: data.courseEndTime || null,
-      courseLocation: data.courseLocation || null,
-      courseValidFrom: data.courseValidFrom || null,
-      courseValidTo: data.courseValidTo || null,
-      courseTeacher: data.courseTeacher || null
+      isCourse: data.isCourse ?? false,
+      courseDay: data.courseDay ?? undefined,
+      courseStartTime: data.courseStartTime ?? undefined,
+      courseEndTime: data.courseEndTime ?? undefined,
+      courseLocation: data.courseLocation ?? undefined,
+      courseValidFrom: data.courseValidFrom ?? undefined,
+      courseValidTo: data.courseValidTo ?? undefined,
+      courseTeacher: data.courseTeacher ?? undefined
     }
     try {
       await db.set('tasks', task)

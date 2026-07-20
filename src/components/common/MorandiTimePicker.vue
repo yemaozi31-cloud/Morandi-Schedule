@@ -80,7 +80,10 @@ function togglePanel() {
   if (props.modelValue) {
     const [h, m] = props.modelValue.split(':').map(Number)
     selHour.value = h
-    selMin.value = mins.reduce((a, b) => Math.abs(b.value - m) < Math.abs(a.value - m) ? b : a).value
+    const validMins = mins.filter((m): m is { name: string; value: number } => m.value !== null)
+    selMin.value = validMins.length > 0
+      ? validMins.reduce((a, b) => Math.abs(b.value - m) < Math.abs(a.value - m) ? b : a).value
+      : 0
   }
 }
 

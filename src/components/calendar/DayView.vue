@@ -90,7 +90,7 @@ function getTasksForHour(hour: number): Task[] {
 }
 
 function taskStyle(task: Task) {
-  if (!task.endTime) return {}
+  if (!task.endTime || !task.dueTime) return {}
   const start = parseInt(task.dueTime.split(':')[0]) * 60 + parseInt(task.dueTime.split(':')[1] || '0')
   const end = parseInt(task.endTime.split(':')[0]) * 60 + parseInt(task.endTime.split(':')[1] || '0')
   const duration = Math.max(end - start, 15)

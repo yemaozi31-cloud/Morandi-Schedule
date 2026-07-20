@@ -489,16 +489,18 @@ async function handleQuickAdd() {
   if (!quickAddText.value.trim()) return
   const parsed = nlpParse(quickAddText.value)
   try {
-    await taskStore.createTask({
-      title: parsed.title || quickAddText.value.trim(),
-      dueDate: parsed.dueDate || selectedDay.value || getTodayStr(),
-      dueTime: parsed.dueTime || null,
-      endDate: parsed.endDate || null,
-      endTime: parsed.endTime || null,
-      priority: (parsed.priority || 'none') as Task['priority'],
+    const p = parsed as Record<string, any>
+    const taskData: Partial<Task> = {
+      title: p.title || quickAddText.value.trim(),
+      dueDate: p.dueDate || selectedDay.value || getTodayStr(),
+      dueTime: p.dueTime || null,
+      endDate: p.endDate || null,
+      endTime: p.endTime || null,
+      priority: (p.priority || 'none') as Task['priority'],
       tagIds: [],
-      recurring: parsed.recurring ? { type: parsed.recurring as 'daily' | 'weekly' | 'weekdays' | 'monthly' | 'yearly' } : null
-    })
+      recurring: p.recurring ? { type: p.recurring as 'daily' | 'weekly' | 'weekdays' | 'monthly' | 'yearly' } : null
+    }
+    await taskStore.createTask(taskData)
     quickAddText.value = ''
     window.__message?.success('任务已创建')
   } catch {
