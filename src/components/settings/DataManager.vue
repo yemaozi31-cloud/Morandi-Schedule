@@ -17,12 +17,21 @@
         <label class="action-btn import" for="import-file">导入</label>
         <input id="import-file" type="file" accept=".json" style="display:none" @change="handleImport" />
       </div>
-      <div class="action-row danger">
+      <div class="action-row">
         <div class="action-info">
-          <span class="action-label">清除所有数据</span>
-          <span class="action-desc">清空 IndexedDB 中的所有数据</span>
+          <span class="action-label">清除本地数据</span>
+          <span class="action-desc">清除本地的任务、习惯、打卡记录，不可恢复</span>
         </div>
         <button class="action-btn danger-btn" @click="handleClear">清除</button>
+      </div>
+      <div class="action-row danger">
+        <div class="action-info">
+          <span class="action-label">清除云端数据</span>
+          <span class="action-desc">清空云端同步文件 + 退出共享习惯，账号保留</span>
+        </div>
+        <button class="action-btn danger-btn" :disabled="clearingCloud" @click="handleClearCloud">
+          {{ clearingCloud ? '清除中…' : '清除' }}
+        </button>
       </div>
     </div>
   </div>
@@ -31,6 +40,12 @@
 <script setup lang="ts">
 import { ref } from 'vue'
 import { getAll, get, set, clear } from '@/db'
+import { deleteAccount } from '@/services/webdavSync'
+import { useSettingsStore } from '@/stores/settingsStore'
+import { showConfirm as showDialogConfirm } from '@/utils/globalConfirm'
+
+const settingsStore = useSettingsStore()
+const clearingCloud = ref(false)
 
 function showConfirm(title: string, message: string, onConfirm: () => void) {
   window.__dialog?.warning({
@@ -40,6 +55,39 @@ function showConfirm(title: string, message: string, onConfirm: () => void) {
     negativeText: '取消',
     onPositiveClick: onConfirm
   })
+}
+
+async function handleClearCloud() {
+  const ok = await showDialogConfirm({
+    title: '清除云端数据',
+    content: '确认清除所有云端数据？此操作不可恢复！\n\n将清除：\n• 云端同步文件\n• 退出所有共享习惯\n\n本地数据不受影响，账号保持登录。'
+  })
+  if (!ok) return
+  clearingCloud.value = true
+  try {
+    const result = await deleteAccount(settingsStore.syncConfig)
+    if (!result.ok) {
+      window.__message?.error(result.message)
+      clearingCloud.value = false
+      return
+    }
+    // 清空本地数据
+    for (const store of ['tasks', 'tags', 'habits', 'habitCheckIns', 'pomodoroSessions', 'settings']) {
+      await clear(store)
+    }
+    // 重新加载 stores
+    const { useTaskStore } = await import('@/stores/taskStore')
+    const { useHabitStore } = await import('@/stores/habitStore')
+    await useTaskStore().loadTasks()
+    await useHabitStore().loadHabits()
+    await useHabitStore().loadCheckIns()
+
+    window.__message?.success('云端数据已清除')
+    clearingCloud.value = false
+  } catch (e) {
+    window.__message?.error('清除失败')
+    clearingCloud.value = false
+  }
 }
 
 async function handleExport() {
@@ -119,6 +167,13 @@ async function handleClear() {
 </script>
 
 <style scoped>
+.data-manager {
+  background: var(--color-surface);
+  border-radius: var(--radius-lg);
+  border: 1px solid var(--color-border-light);
+  overflow: hidden;
+}
+
 .section-title {
   font-size: var(--font-size-lg);
   color: var(--color-text);
