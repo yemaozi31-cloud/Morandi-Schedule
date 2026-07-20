@@ -116,6 +116,7 @@ import { useTagStore } from '@/stores/tagStore'
 import { usePomodoroStore } from '@/stores/pomodoroStore'
 import { useHabitStore } from '@/stores/habitStore'
 import { useSettingsStore } from '@/stores/settingsStore'
+import { fetchSharedData } from '@/services/webdavSync'
 import type { Task } from '@/types'
 import { nlpParse } from '@/utils/nlpParser'
 import { getTodayStr } from '@/utils/date'
@@ -147,20 +148,52 @@ const habitsExpand = ref(true)
 const { confirm: deleteConfirm, handleDelete, onDeleteConfirmed } = useDeleteTask()
 const sharedRefreshTrigger = ref(0)
 
-// 共享习惯60秒轮询
-setInterval(() => { sharedRefreshTrigger.value++ }, 60000)
+// 云端共享习惯
+const cloudSharedHabits = ref<any[]>([])
 
+// 30 秒轮询：刷新共享数据
+setInterval(() => {
+  sharedRefreshTrigger.value++
+  loadCloudSharedHabits()
+}, 30000)
 
-const todayHabits = computed(() =>
-  habitStore.sortedHabits
-)
+/** 合并后的习惯列表：本地 + 云端共享 */
+const todayHabits = computed(() => {
+  const local = habitStore.sortedHabits
+  const cloud = cloudSharedHabits.value
+  if (cloud.length === 0) return local
+  return [...local, ...cloud].sort((a, b) => a.createdAt.localeCompare(b.createdAt))
+})
 
 const pendingHabitCount = computed(() => {
   return todayHabits.value.filter(h => {
+    if (h.isShared) return false
     const val = habitStore.getPeriodValue(h.id)
     return val < h.target
   }).length
 })
+
+async function loadCloudSharedHabits() {
+  const cfg = settingsStore.syncConfig
+  if (!cfg.webdavUrl || !cfg.nickname) return
+  try {
+    const data = await fetchSharedData(cfg)
+    const nick = cfg.nickname
+    const myHabits = data.habits.filter(h => h.members.includes(nick!))
+    cloudSharedHabits.value = myHabits.map(h => ({
+      id: `shared-${h.name}`,
+      name: h.name,
+      frequency: 'daily' as const,
+      target: 1,
+      unit: 'times' as const,
+      color: '#A3B5A0',
+      isShared: true,
+      sharedHabitName: h.name,
+      sharedCreatedBy: h.createdBy,
+      createdAt: h.createdAt
+    }))
+  } catch { /* 轮询静默重试 */ }
+}
 
 const overdueTasks = computed(() =>
   taskStore.activeTasks.filter(t =>
@@ -174,6 +207,7 @@ onMounted(async () => {
   await pomodoroStore.loadSessions()
   await habitStore.loadHabits()
   await habitStore.loadCheckIns()
+  await loadCloudSharedHabits()
 })
 
 function openEditTask(taskId: string) {

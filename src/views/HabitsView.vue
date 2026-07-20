@@ -10,7 +10,7 @@
       <!-- 习惯紧凑列表 -->
       <div class="habits-list">
         <div
-          v-for="habit in habitStore.sortedHabits"
+          v-for="habit in displayHabits"
           :key="habit.id"
           class="habit-item"
         >
@@ -29,13 +29,14 @@
                 :habit-id="habit.id"
                 :habit-name="habit.name"
                 :habit-target="habit.target"
+                :is-shared="habit.isShared"
                 :refresh-trigger="sharedRefreshTrigger"
               />
             </div>
           </transition>
         </div>
         <EmptyState
-          v-if="habitStore.sortedHabits.length === 0"
+          v-if="displayHabits.length === 0"
           title="还没有习惯"
           description="创建第一个习惯开始追踪"
           :icon="'flame'"
@@ -106,8 +107,10 @@
 </template>
 
 <script setup lang="ts">
-import { ref, onMounted, nextTick } from 'vue'
+import { ref, computed, onMounted, nextTick } from 'vue'
 import { useHabitStore } from '@/stores/habitStore'
+import { useSettingsStore } from '@/stores/settingsStore'
+import { fetchSharedData } from '@/services/webdavSync'
 import AppLayout from '@/components/layout/AppLayout.vue'
 import HabitCard from '@/components/habits/HabitCard.vue'
 import HabitHeatmap from '@/components/habits/HabitHeatmap.vue'
@@ -116,11 +119,49 @@ import Icon from '@/components/common/Icon.vue'
 import MobileBackLink from '@/components/common/MobileBackLink.vue'
 
 const habitStore = useHabitStore()
+const settingsStore = useSettingsStore()
 
 const showForm = ref(false)
 const expandedHabits = ref<Record<string, boolean>>({})
 const sharedRefreshTrigger = ref(0)
-setInterval(() => { sharedRefreshTrigger.value++ }, 60000)
+// 云端共享习惯列表
+const cloudSharedHabits = ref<any[]>([])
+
+// 30 秒轮询：刷新云端共享习惯
+setInterval(() => {
+  sharedRefreshTrigger.value++
+  loadCloudSharedHabits()
+}, 30000)
+
+/** 合并后的习惯列表：本地普通习惯 + 云端共享习惯 */
+const displayHabits = computed(() => {
+  const local = habitStore.sortedHabits
+  const cloud = cloudSharedHabits.value
+  if (cloud.length === 0) return local
+  return [...local, ...cloud].sort((a, b) => a.createdAt.localeCompare(b.createdAt))
+})
+
+async function loadCloudSharedHabits() {
+  const cfg = settingsStore.syncConfig
+  if (!cfg.webdavUrl || !cfg.nickname) return
+  try {
+    const data = await fetchSharedData(cfg)
+    const nick = cfg.nickname
+    const myHabits = data.habits.filter(h => h.members.includes(nick!))
+    cloudSharedHabits.value = myHabits.map(h => ({
+      id: `shared-${h.name}`,
+      name: h.name,
+      frequency: 'daily' as const,
+      target: 1,
+      unit: 'times' as const,
+      color: '#A3B5A0',
+      isShared: true,
+      sharedHabitName: h.name,
+      sharedCreatedBy: h.createdBy,
+      createdAt: h.createdAt
+    }))
+  } catch { /* 轮询静默重试 */ }
+}
 
 function toggleExpand(id: string) {
   expandedHabits.value[id] = !expandedHabits.value[id]
@@ -143,6 +184,7 @@ const colors = [
 onMounted(async () => {
   await habitStore.loadHabits()
   await habitStore.loadCheckIns()
+  await loadCloudSharedHabits()
 })
 
 async function handleSave() {

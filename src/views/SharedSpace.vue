@@ -137,9 +137,6 @@
 import { ref, computed, reactive, onMounted } from 'vue'
 import { getTodayStr } from '@/utils/date'
 import { useSettingsStore } from '@/stores/settingsStore'
-import { generateUUID } from '@/utils/uuid'
-import * as db from '@/db'
-import { useHabitStore } from '@/stores/habitStore'
 import {
   createSharedHabit, acceptSharedHabitInvite,
   ignoreSharedHabitInvite, leaveSharedHabit, checkInSharedHabit, cancelCheckIn,
@@ -152,7 +149,6 @@ import Icon from '@/components/common/Icon.vue'
 import MorandiTimePicker from '@/components/common/MorandiTimePicker.vue'
 
 const settingsStore = useSettingsStore()
-const habitStore = useHabitStore()
 const config = computed(() => settingsStore.syncConfig)
 const isConfigured = computed(() => !!config.value.nickname && !!config.value.webdavUrl)
 const myNick = computed(() => config.value.nickname || '')
@@ -326,8 +322,6 @@ async function handleCreate() {
   )
   if (ok) {
     window.__message?.success('共享习惯已创建')
-    // 创建者也加到本地习惯列表
-    await habitStore.acceptSharedHabit({ name: newHabitName.value.trim(), createdBy: myNick.value })
     newHabitName.value = ''
     invitees.value = []
     hasDeadline.value = false
@@ -341,7 +335,6 @@ async function handleCreate() {
 async function handleAccept(invite: SharedHabitData) {
   const ok = await acceptSharedHabitInvite(config.value, invite.name, myNick.value)
   if (ok) {
-    await habitStore.acceptSharedHabit({ name: invite.name, createdBy: invite.createdBy })
     window.__message?.success('已加入共享习惯')
     await loadSharedData()
   } else {
@@ -362,77 +355,29 @@ async function handleIgnore(invite: SharedHabitData) {
 async function handleLeave(habit: SharedHabitData) {
   const ok = await leaveSharedHabit(config.value, habit.name, myNick.value)
   if (ok) {
-    // 删除所有同名共享习惯的本地副本（用 Array.from 保证 Pinia ref Map 遍历可靠）
-    const allHabits = Array.from(habitStore.habits.values())
-    let count = 0
-    for (const h of allHabits) {
-      if (h.sharedHabitName === habit.name) {
-        await habitStore.deleteHabit(h.id)
-        count++
-      }
-    }
-    // 重新从云端拉取 + 从 IndexedDB 重新加载 habitStore
     await loadSharedData()
-    await habitStore.loadHabits()
-    await habitStore.loadCheckIns()
-    window.__message?.info(`已退出「${habit.name}」，清理 ${count} 条本地记录`)
+    window.__message?.info(`已退出「${habit.name}」`)
   } else {
     window.__message?.error('操作失败')
   }
 }
 
-/** 获取本地共享习惯 ID */
-function getLocalHabitId(sharedName: string): string | null {
-  const all = Array.from(habitStore.habits.entries())
-  for (const [id, h] of all) {
-    if (h.sharedHabitName === sharedName) return id
-  }
-  return null
-}
-
 async function handleSharedCheckIn(habitName: string) {
   const today = getTodayStr()
-  const localId = getLocalHabitId(habitName)
   const alreadyCheckedIn = sharedData.value.checkIns.some(
     c => c.habitName === habitName && c.nick === myNick.value && c.date === today
   )
   if (alreadyCheckedIn) {
-    // 取消打卡（云端+本地：直接删本地记录）
     const ok = await cancelCheckIn(config.value, habitName, myNick.value)
     if (ok) {
-      if (localId) {
-        const allCheckIns = Array.from(habitStore.checkIns.entries())
-        for (const [id, c] of allCheckIns) {
-          if (c.habitId === localId && c.date === today) {
-            await db.remove('habitCheckIns', id)
-            habitStore.checkIns.delete(id)
-          }
-        }
-      }
       window.__message?.info('已取消打卡')
       await loadSharedData()
     } else {
       window.__message?.error('取消失败')
     }
   } else {
-    // 打卡（云端+本地：直接 set value=1，不经过 habitStore.checkIn）
     const ok = await checkInSharedHabit(config.value, habitName, myNick.value)
     if (ok) {
-      if (localId) {
-        // 清除今日所有本地记录后重建为 value=1
-        for (const [id, c] of habitStore.checkIns) {
-          if (c.habitId === localId && c.date === today) {
-            await db.remove('habitCheckIns', id)
-            habitStore.checkIns.delete(id)
-          }
-        }
-        const newCI = {
-          id: generateUUID(), habitId: localId, date: today,
-          value: 1, createdAt: new Date().toISOString()
-        }
-        await db.set('habitCheckIns', newCI)
-        habitStore.checkIns.set(newCI.id, newCI)
-      }
       window.__message?.success('打卡成功')
       await loadSharedData()
     } else {

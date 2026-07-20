@@ -274,35 +274,11 @@ export const useHabitStore = defineStore('habits', () => {
     return d.toISOString().slice(0, 10)
   }
 
-  async function acceptSharedHabit(sharedHabit: { name: string; createdBy: string }): Promise<void> {
-    const habit: Habit = {
-      id: generateUUID(),
-      name: sharedHabit.name,
-      frequency: 'daily',
-      target: 1,
-      unit: 'times',
-      color: '#A3B5A0', // 莫兰迪绿，和普通习惯区分
-      isShared: true,
-      sharedHabitName: sharedHabit.name,
-      sharedCreatedBy: sharedHabit.createdBy,
-      createdAt: new Date().toISOString()
-    }
-    try {
-      await db.set('habits', habit)
-      triggerAutoSync()
-      habits.value.set(habit.id, habit)
-    } catch (e) {
-      console.error('acceptSharedHabit failed:', e)
-      throw e
-    }
-  }
-
   return {
     habits, checkIns, sortedHabits,
     loadHabits, loadCheckIns,
     createHabit, updateHabit, deleteHabit,
     checkIn, deleteCheckIn, getCheckInsForHabit, getCheckInsInRange, getStreak,
-    getPeriodValue, getPeriodLabel,
-    acceptSharedHabit
+    getPeriodValue, getPeriodLabel
   }
 })

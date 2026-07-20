@@ -224,12 +224,14 @@ async function handleDelete() {
   const ok = await showConfirm({ title: '删除习惯', content: `确认删除习惯"${props.habit.name}"？打卡记录也将被清除。` })
   if (!ok) return
   try {
-    // 共享习惯：同步退出到云端，再删本地
     if (props.habit.isShared && props.habit.sharedHabitName) {
+      // 共享习惯：退出到云端，本地不留记录
       const { leaveSharedHabit } = await import('@/services/webdavSync')
       await leaveSharedHabit(cfg.value, props.habit.sharedHabitName, cfg.value.nickname!)
+    } else {
+      // 普通习惯：删本地记录
+      await habitStore.deleteHabit(props.habit.id)
     }
-    await habitStore.deleteHabit(props.habit.id)
     window.__message?.success('习惯已删除')
   } catch {
     window.__message?.error('删除失败')

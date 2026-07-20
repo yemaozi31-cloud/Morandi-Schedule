@@ -34,7 +34,7 @@ import { format, startOfMonth, endOfMonth, startOfWeek, endOfWeek, addMonths, su
 import { fetchSharedCheckIns } from '@/services/webdavSync'
 import Icon from '@/components/common/Icon.vue'
 
-const props = defineProps<{ habitId: string; habitName: string; habitTarget: number; refreshTrigger?: number }>()
+const props = defineProps<{ habitId: string; habitName: string; habitTarget: number; refreshTrigger?: number; isShared?: boolean }>()
 
 const habitStore = useHabitStore()
 const settingsStore = useSettingsStore()
@@ -46,8 +46,11 @@ const currentYear = computed(() => currentDate.value.getFullYear())
 const currentMonth = computed(() => currentDate.value.getMonth())
 
 const habit = computed(() => habitStore.habits.get(props.habitId))
-const isShared = computed(() => habit.value?.isShared)
-const sharedName = computed(() => habit.value?.sharedHabitName)
+const isShared = computed(() => props.isShared ?? habit.value?.isShared ?? false)
+const sharedName = computed(() => {
+  if (props.isShared) return props.habitName
+  return habit.value?.sharedHabitName
+})
 const myNick = computed(() => settingsStore.syncConfig.nickname)
 
 /** 云端共享打卡数据 */
