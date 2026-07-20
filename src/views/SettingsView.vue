@@ -77,11 +77,11 @@
             </div>
             <div class="action-row danger" style="border-top: 1px solid var(--color-danger);">
               <div class="action-info">
-                <span class="action-label">删除账号</span>
-                <span class="action-desc">清除本地数据 + 云端文件，不可恢复</span>
+                <span class="action-label">清除账号数据</span>
+                <span class="action-desc">清空本地 + 云端所有数据，账号保留</span>
               </div>
-              <button class="action-btn danger-btn" :disabled="deletingAccount" @click="handleDeleteAccount">
-                {{ deletingAccount ? '删除中…' : '删除' }}
+              <button class="action-btn danger-btn" :disabled="clearingData" @click="handleClearAccountData">
+                {{ clearingData ? '清除中…' : '清除' }}
               </button>
             </div>
           </div>
@@ -127,7 +127,6 @@ import DataManager from '@/components/settings/DataManager.vue'
 import MobileBackLink from '@/components/common/MobileBackLink.vue'
 import { fetch as tauriFetch } from '@tauri-apps/plugin-http'
 import { encryptSyncData, decryptSyncData } from '@/utils/crypto'
-import { deleteAccount } from '@/services/webdavSync'
 import { version as pkgVersion } from '../../package.json'
 
 const appVersion = pkgVersion
@@ -288,38 +287,59 @@ async function handleDeleteCourses() {
   }
 }
 
-const deletingAccount = ref(false)
+const clearingData = ref(false)
 
-async function handleDeleteAccount() {
+async function handleClearAccountData() {
   const ok = await showConfirm({
-    title: '删除账号',
-    content: '确认删除所有数据？此操作不可恢复！\n\n将清除：\n• 本地所有数据（任务、习惯、打卡）\n• 云端同步文件\n• 共享习惯中的记录\n\n其他设备登录此账号也不会恢复任何数据。'
+    title: '清除账号数据',
+    content: '确认清除所有数据？不可恢复！\n\n将清除：\n• 本地所有数据（任务、习惯、打卡）\n• 云端同步文件中的全部内容\n• 共享习惯中的记录\n\n账号（昵称）保留，不清除登录状态。'
   })
   if (!ok) return
-  deletingAccount.value = true
+  clearingData.value = true
   try {
-    const result = await deleteAccount(settingsStore.syncConfig)
-    if (!result.ok) {
-      window.__message?.error(result.message)
-      deletingAccount.value = false
-      return
+    // 1. 退出所有共享习惯
+    const { fetchSharedData, leaveSharedHabit, ignoreSharedHabitInvite } = await import('@/services/webdavSync')
+    const cfg = settingsStore.syncConfig
+    const nick = cfg.nickname
+    if (nick) {
+      const sharedData = await fetchSharedData(cfg)
+      for (const habit of sharedData.habits) {
+        if (habit.members.includes(nick)) {
+          await leaveSharedHabit(cfg, habit.name, nick)
+        } else if (habit.invitees.includes(nick)) {
+          await ignoreSharedHabitInvite(cfg, habit.name, nick)
+        }
+      }
     }
-    // 清空本地数据
+
+    // 2. 用空数据覆盖云端同步文件
+    const { pushToWebDAV } = await import('@/services/webdavSync')
+    await pushToWebDAV(cfg)
+
+    // 3. 清空本地所有数据
     const { clear } = await import('@/db')
     for (const store of ['tasks', 'tags', 'habits', 'habitCheckIns', 'pomodoroSessions', 'settings']) {
       await clear(store)
     }
-    // 退出登录
-    localStorage.removeItem('morandi_logged_in')
-    localStorage.removeItem('last_page')
-    settingsStore.syncConfig.nickname = ''
-    settingsStore.syncConfig.privateKey = ''
-    await settingsStore.saveSyncConfig()
-    window.__message?.success('账号已彻底删除')
-    router.push('/login')
+
+    // 4. 重新加载 stores（空状态）
+    const { useTaskStore } = await import('@/stores/taskStore')
+    const { useHabitStore } = await import('@/stores/habitStore')
+    const { useTagStore } = await import('@/stores/tagStore')
+    const { usePomodoroStore } = await import('@/stores/pomodoroStore')
+    await Promise.all([
+      useTaskStore().loadTasks(),
+      useHabitStore().loadHabits(),
+      useHabitStore().loadCheckIns(),
+      useTagStore().loadTags(),
+      usePomodoroStore().loadSessions()
+    ])
+
+    window.__message?.success('账号数据已全部清除')
+    clearingData.value = false
   } catch (e) {
-    window.__message?.error('删除失败')
-    deletingAccount.value = false
+    window.__message?.error('清除失败')
+    clearingData.value = false
   }
 }
 
