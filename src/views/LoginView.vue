@@ -317,7 +317,7 @@ onMounted(() => {
   justify-content: center;
   min-height: 100dvh;
   padding: var(--spacing-xl);
-  padding-top: env(safe-area-inset-top, 0px);
+  padding-top: max(var(--spacing-xl), env(safe-area-inset-top, 0px));
   background: var(--color-bg);
 }
 

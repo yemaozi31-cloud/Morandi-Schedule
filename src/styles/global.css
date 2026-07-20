@@ -13,8 +13,7 @@ html {
   font-size: var(--font-size-md);
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
-  background: var(--color-bg);
-  transition: background var(--transition-normal);
+  background-color: var(--color-bg);
 }
 
 body {
@@ -24,12 +23,6 @@ body {
   line-height: 1.6;
   overflow: hidden;
   height: 100vh;
-  transition: background-color var(--transition-normal), color var(--transition-normal);
-}
-
-/* 主题切换过渡 — 全局统一，避免部分元素跳变 */
-* {
-  transition: background-color var(--transition-normal), border-color var(--transition-normal);
 }
 
 #app {

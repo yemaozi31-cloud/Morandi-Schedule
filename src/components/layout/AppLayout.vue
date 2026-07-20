@@ -65,7 +65,7 @@ const visibleItems = MOBILE_NAV_ITEMS.slice(0, 4)
   flex-direction: column;
   overflow-y: auto;
   padding: var(--spacing-xl);
-  padding-top: env(safe-area-inset-top, 0px);
+  padding-top: max(var(--spacing-xl), env(safe-area-inset-top, 0px));
   min-height: 0;
   background: var(--color-bg);
 }
